@@ -761,8 +761,8 @@
         </div>
     </div>
 
-    <!-- ========== DIRECTOR PANEL ========== -->
-    <div class="panel-container hidden" id="director-panel">
+    <!-- ========== DIRECTOR PANEL (hidden class removed) ========== -->
+    <div class="panel-container" id="director-panel">
         <div class="panel-header">
             <h3 style="color:#fff;">📊 Director Dashboard</h3>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -843,8 +843,8 @@
         </div>
     </div>
 
-    <!-- ========== RECEPTIONIST PANEL ========== -->
-    <div class="panel-container hidden" id="receptionist-panel">
+    <!-- ========== RECEPTIONIST PANEL (hidden class removed) ========== -->
+    <div class="panel-container" id="receptionist-panel">
         <div class="panel-header">
             <h3 style="color:#fff;">🖨 Receptionist Panel</h3>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -878,8 +878,8 @@
         </div>
     </div>
 
-    <!-- ========== DOCTOR CONSOLE ========== -->
-    <div class="panel-container hidden" id="doctor-panel">
+    <!-- ========== DOCTOR CONSOLE (hidden class removed) ========== -->
+    <div class="panel-container" id="doctor-panel">
         <div class="panel-header">
             <h3 style="color:#fff;" id="doc-console-title">🩺 Doctor Console</h3>
             <button class="btn btn-red btn-sm" id="doc-logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
@@ -1385,8 +1385,9 @@
                 hideAllModals();
                 document.getElementById('display-board-section').style.display = 'none';
                 document.getElementById('floating-ticket-btn').style.display = 'none';
-                document.getElementById('director-panel').classList.add('active');
-                document.getElementById('director-panel').scrollIntoView({ behavior: 'smooth' });
+                const panel = document.getElementById('director-panel');
+                panel.classList.add('active');
+                panel.scrollIntoView({ behavior: 'smooth' });
                 refreshDirectorDoctors();
                 refreshAnalytics();
             }
@@ -1665,8 +1666,9 @@
                 hideAllModals();
                 document.getElementById('display-board-section').style.display = 'none';
                 document.getElementById('floating-ticket-btn').style.display = 'none';
-                document.getElementById('receptionist-panel').classList.add('active');
-                document.getElementById('receptionist-panel').scrollIntoView({ behavior: 'smooth' });
+                const panel = document.getElementById('receptionist-panel');
+                panel.classList.add('active');
+                panel.scrollIntoView({ behavior: 'smooth' });
                 loadDoctorSelect('rec-offline-doctor');
                 refreshPendingBookings();
             }
@@ -1821,8 +1823,9 @@
                 hideAllModals();
                 document.getElementById('display-board-section').style.display = 'none';
                 document.getElementById('floating-ticket-btn').style.display = 'none';
-                document.getElementById('doctor-panel').classList.add('active');
-                document.getElementById('doctor-panel').scrollIntoView({ behavior: 'smooth' });
+                const panel = document.getElementById('doctor-panel');
+                panel.classList.add('active');
+                panel.scrollIntoView({ behavior: 'smooth' });
                 // Find doctor by matching credentials (simple approach: find first doctor)
                 db.ref('doctors').once('value').then(snap => {
                     const doctors = snap.val() || {};
