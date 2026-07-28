@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Queue & Management System</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --secondary-color: #17a2b8;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --dark-color: #1e293b;
+            --light-color: #f8f9fa;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f1f5f9;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styles */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .clinic-brand {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .lang-select {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .lang-select option {
+            background: white;
+            color: #333;
+        }
+
+        /* Container & Layout */
+        .main-container {
+            flex: 1;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Airport Board Styles */
+        .airport-board {
+            background: var(--dark-color);
+            color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .board-title {
+            text-align: center;
+            color: #38bdf8;
+            font-size: 28px;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .board-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .board-table th {
+            background-color: #0f172a;
+            color: #94a3b8;
+            padding: 15px;
+            text-align: left;
+            text-transform: uppercase;
+            font-size: 14px;
+            border-bottom: 2px solid #334155;
+        }
+
+        .board-table td {
+            padding: 18px 15px;
+            border-bottom: 1px solid #334155;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Priority Flash Alert Row */
+        .priority-row {
+            background-color: #1e3a8a !important;
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+            animation: pulse-glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 10px #38bdf8, inset 0 0 10px #38bdf8; }
+            100% { box-shadow: 0 0 25px #38bdf8, inset 0 0 20px #38bdf8; }
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        /* Floating Queue Button */
+        .floating-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--success-color);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        /* Forms & Inputs */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-success { background: var(--success-color); color: white; }
+        .btn-danger { background: var(--danger-color); color: white; }
+        .btn-warning { background: var(--warning-color); color: #000; }
+
+        /* General Alert Banners */
+        .banner {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            display: none;
+        }
+
+        /* Panels Shared Styles */
+        .panel {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        #map, #adminMapPicker {
+            height: 250px;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        /* Print Receipt Layout */
+        @media print {
+            body * { visibility: hidden; }
+            #printableTicket, #printableTicket * { visibility: visible; }
+            #printableTicket {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm;
+                padding: 10px;
+            }
+        }
+
+        .ticket-receipt {
+            width: 250px;
+            border: 1px dashed #000;
+            padding: 15px;
+            text-align: center;
+            margin: 0 auto;
+        }
+
+        /* Dynamic Visual Alerts Responsive */
+        @media (max-width: 768px) {
+            .board-table th, .board-table td {
+                padding: 10px 5px;
+                font-size: 14px;
+            }
+            .floating-btn {
+                bottom: 15px;
+                right: 15px;
+                padding: 12px 18px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="clinic-brand" id="clinicBrandBtn">
+            <i class="fa-solid fa-hospital"></i>
+            <span id="clinicNameDisplay">UZB</span>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" id="infoBtn" title="Clinic Info"><i class="fa-solid fa-circle-info"></i></button>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <i class="fa-solid fa-globe"></i>
+                <select class="lang-select" id="langSelect">
+                    <option value="UZ">UZ</option>
+                    <option value="EN" selected>EN</option>
+                    <option value="RU">RU</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <div id="skippingBanner" class="banner"></div>
+
+        <div class="airport-board">
+            <div class="board-title" data-i18n="queue_board">MAIN QUEUE BOARD</div>
+            <table class="board-table">
+                <thead>
+                    <tr>
+                        <th data-i18n="doctor">Doctor</th>
+                        <th data-i18n="specialty">Specialty</th>
+                        <th data-i18n="room">Room</th>
+                        <th data-i18n="current_ticket">Current Ticket</th>
+                        <th data-i18n="status">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="boardTbody">
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="portalContainer"></div>
+    </div>
+
+    <button class="floating-btn" id="getTicketBtn">
+        <i class="fa-solid fa-ticket"></i>
+        <span data-i18n="get_ticket">Get Queue Ticket</span>
+    </button>
+
+    <div class="modal" id="infoModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('infoModal')">&times;</span>
+            <h2 id="infoClinicName">Clinic Description</h2>
+            <p id="infoClinicDesc" style="margin: 15px 0;">Loading clinic details...</p>
+            <img id="infoClinicPhoto" src="" alt="Clinic Image" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 6px; display: none;">
+            <h3 style="margin-top: 15px;" data-i18n="location">Location</h3>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('loginModal')">&times;</span>
+            <h2 style="margin-bottom: 20px;" data-i18n="system_login">System Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label data-i18n="username">Username</label>
+                    <input type="text" class="form-control" id="loginUser" required>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="password">Password</label>
+                    <input type="password" class="form-control" id="loginPass" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;" data-i18n="login">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('bookingModal')">&times;</span>
+            <h2 style="margin-bottom: 20px;" data-i18n="book_ticket">Book Queue Ticket</h2>
+            <form id="bookingForm">
+                <div class="form-group">
+                    <label data-i18n="select_doctor">Select Doctor / Department</label>
+                    <select class="form-control" id="bookingDoctorSelect" required></select>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="first_name">First Name</label>
+                    <input type="text" class="form-control" id="bookingFirstName" required>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="last_name">Last Name</label>
+                    <input type="text" class="form-control" id="bookingLastName" required>
+                </div>
+                <div style="background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                    <span data-i18n="estimated_ticket">You will receive Ticket:</span>
+                    <strong id="estimatedTicketNum" style="font-size: 20px; color: var(--primary-color);">#-</strong>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;" data-i18n="proceed">Proceed</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="confirmBookingModal">
+        <div class="modal-content">
+            <h3 style="color: var(--danger-color); margin-bottom: 15px;" data-i18n="activation_warning">Activation Warning</h3>
+            <p style="margin-bottom: 20px;" data-i18n="warning_text">Your ticket is currently INACTIVE. Please pay at the reception desk upon arrival to activate your queue. Confirm booking?</p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-danger" onclick="closeModal('confirmBookingModal')" data-i18n="no">NO</button>
+                <button class="btn btn-success" id="confirmBookingBtn" data-i18n="yes">YES</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="printableTicket" style="display: none;"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, get, child, onValue, update, push, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCPXJzgFwlnvkHgWlUiDOHRErIHVT05QcE",
+            authDomain: "clinic-ba7d7.firebaseapp.com",
+            projectId: "clinic-ba7d7",
+            storageBucket: "clinic-ba7d7.firebasestorage.app",
+            messagingSenderId: "708731320206",
+            appId: "1:708731320206:web:4c91ee1dd785f1373b56df"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const storage = getStorage(app);
+
+        // Global State & Translations
+        let currentLang = "EN";
+        let clinicData = {
+            name: "UZB",
+            desc: "Modern Multispecialty Hospital & Diagnostic Center.",
+            photo: "",
+            lat: 41.2995,
+            lng: 69.2401
+        };
+        let doctorsList = {};
+        let ticketsList = {};
+        let currentUser = null;
+        let secretClicks = 0;
+        let mapInstance = null;
+        let adminMapInstance = null;
+        let adminMarker = null;
+        let chartInstance = null;
+
+        const i18n = {
+            UZ: {
+                queue_board: "ASOSIY NAVBAT TIZIMI",
+                doctor: "Shifokor",
+                specialty: "Mutaxassislik",
+                room: "Xona",
+                current_ticket: "Joriy Chipta",
+                status: "Holat",
+                get_ticket: "Navbat Chiptasini Olish",
+                location: "Joylashuv",
+                system_login: "Tizimga Kirish",
+                username: "Foydalanuvchi nomi",
+                password: "Parol",
+                login: "Kirish",
+                book_ticket: "Navbatni Band Qilish",
+                select_doctor: "Shifokor/Bo'limni Tanlang",
+                first_name: "Ism",
+                last_name: "Familiya",
+                estimated_ticket: "Sizning chipta raqamingiz:",
+                proceed: "Davom Etish",
+                activation_warning: "Tollanish haqida ogohlantirish",
+                warning_text: "Sizning chiptangiz NOLONG-FAOL. Iltimos, kelganingizda qabulxonada to'lovni amalga oshiring. Tasdiqlaysizmi?",
+                yes: "HA",
+                no: "YO'Q",
+                in_consultation: "Qabulda",
+                waiting: "Kutmoqda",
+                called: "Chaqirildi"
+            },
+            EN: {
+                queue_board: "MAIN QUEUE BOARD",
+                doctor: "Doctor",
+                specialty: "Specialty",
+                room: "Room",
+                current_ticket: "Current Ticket",
+                status: "Status",
+                get_ticket: "Get Queue Ticket",
+                location: "Location",
+                system_login: "System Login",
+                username: "Username",
+                password: "Password",
+                login: "Login",
+                book_ticket: "Book Queue Ticket",
+                select_doctor: "Select Doctor / Department",
+                first_name: "First Name",
+                last_name: "Last Name",
+                estimated_ticket: "You will receive Ticket:",
+                proceed: "Proceed",
+                activation_warning: "Activation Warning",
+                warning_text: "Your ticket is currently INACTIVE. Please pay at the reception desk upon arrival to activate your queue. Confirm booking?",
+                yes: "YES",
+                no: "NO",
+                in_consultation: "In Consultation",
+                waiting: "Waiting",
+                called: "Called"
+            },
+            RU: {
+                queue_board: "ГЛАВНОЕ ТAБЛО ОЧЕРЕДИ",
+                doctor: "Врач",
+                specialty: "Специальность",
+                room: "Кабинет",
+                current_ticket: "Текущий Билет",
+                status: "Статус",
+                get_ticket: "Получить Талон",
+                location: "Локация",
+                system_login: "Вход в систему",
+                username: "Логин",
+                password: "Пароль",
+                login: "Войти",
+                book_ticket: "Забронировать Билет",
+                select_doctor: "Выберите Врача / Отделение",
+                first_name: "Имя",
+                last_name: "Фамилия",
+                estimated_ticket: "Ваш билет:",
+                proceed: "Продолжить",
+                activation_warning: "Предупреждение об активации",
+                warning_text: "Ваш билет НЕАКТИВЕН. Пожалуйста, оплатите в регистратуре по прибытии. Подтверждаете?",
+                yes: "ДА",
+                no: "НЕТ",
+                in_consultation: "На приеме",
+                waiting: "Ожидание",
+                called: "Вызван"
+            }
+        };
+
+        // --- Audio Chime ---
+        function playChime() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.8);
+        }
+
+        // Window-bound Functions
+        window.closeModal = (id) => {
+            document.getElementById(id).classList.remove('active');
+        };
+
+        // Language Translation Handler
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang] && i18n[lang][key]) {
+                    el.innerText = i18n[lang][key];
+                }
+            });
+            renderBoard();
+        }
+
+        document.getElementById('langSelect').addEventListener('change', (e) => {
+            setLanguage(e.target.value);
+        });
+
+        // Initialize Firebase Realtime Data Listeners
+        function initDataListeners() {
+            // Clinic Settings Listener
+            onValue(ref(db, 'settings'), (snapshot) => {
+                if (snapshot.exists()) {
+                    clinicData = snapshot.val();
+                    document.getElementById('clinicNameDisplay').innerText = clinicData.name || "UZB";
+                    document.getElementById('infoClinicName').innerText = clinicData.name || "UZB";
+                    document.getElementById('infoClinicDesc').innerText = clinicData.desc || "";
+                    if (clinicData.photo) {
+                        const img = document.getElementById('infoClinicPhoto');
+                        img.src = clinicData.photo;
+                        img.style.display = "block";
+                    }
+                }
+            });
+
+            // Doctors Listener
+            onValue(ref(db, 'doctors'), (snapshot) => {
+                doctorsList = snapshot.val() || {};
+                renderBoard();
+                populateDoctorDropdowns();
+                if (currentUser && currentUser.role === 'director') renderDoctorManagementTable();
+            });
+
+            // Tickets Listener
+            onValue(ref(db, 'tickets'), (snapshot) => {
+                ticketsList = snapshot.val() || {};
+                renderBoard();
+                if (currentUser && currentUser.role === 'receptionist') renderReceptionistPanel();
+                if (currentUser && currentUser.role === 'doctor') renderDoctorConsole();
+            });
+        }
+
+        // Render Airport Queue Board
+        function renderBoard() {
+            const tbody = document.getElementById('boardTbody');
+            tbody.innerHTML = '';
+
+            let docArray = Object.keys(doctorsList).map(id => ({ id, ...doctorsList[id] }));
+
+            // Sort logic: Move doctor with 'called' or 'priority' active state to top
+            docArray.sort((a, b) => (b.priority ? 1 : 0) - (a.priority ? 1 : 0));
+
+            docArray.forEach(doc => {
+                // Find active ticket for doctor
+                const activeTicket = Object.values(ticketsList)
+                    .filter(t => t.doctorId === doc.id && (t.status === 'in-consultation' || t.status === 'called'))
+                    .pop();
+
+                const tr = document.createElement('tr');
+                if (doc.priority) {
+                    tr.className = 'priority-row';
+                }
+
+                const ticketNumStr = activeTicket ? `#${activeTicket.number}` : '-';
+                let statusText = '-';
+                if (activeTicket) {
+                    statusText = i18n[currentLang][activeTicket.status === 'called' ? 'called' : 'in_consultation'];
+                }
+
+                tr.innerHTML = `
+                    <td>${doc.firstName} ${doc.lastName}</td>
+                    <td>${doc.specialty}</td>
+                    <td>${doc.room || '101'}</td>
+                    <td style="color: #38bdf8; font-size: 22px;">${ticketNumStr}</td>
+                    <td><span style="background: rgba(56, 189, 248, 0.2); padding: 5px 10px; border-radius: 4px; color: #38bdf8;">${statusText}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Hidden Admin Trigger Logic (5 Consecutive Clicks)
+        document.getElementById('clinicBrandBtn').addEventListener('click', () => {
+            secretClicks++;
+            if (secretClicks >= 5) {
+                alert("Hidden Admin access unlocked! Click 'Get Queue Ticket' to proceed to Login.");
+            }
+        });
+
+        document.getElementById('getTicketBtn').addEventListener('click', () => {
+            if (secretClicks >= 5) {
+                secretClicks = 0; // Reset
+                document.getElementById('loginModal').classList.add('active');
+            } else {
+                openBookingModal();
+            }
+        });
+
+        // Secret Login Submit
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('loginUser').value.trim();
+            const p = document.getElementById('loginPass').value.trim();
+
+            // Fetch custom auth settings or defaults
+            const authSnap = await get(ref(db, 'auth'));
+            const authData = authSnap.val() || {};
+
+            const dirUser = authData.dirUser || "aaa";
+            const dirPass = authData.dirPass || "111";
+            const recUser = authData.recUser || "bbb";
+            const recPass = authData.recPass || "222";
+
+            closeModal('loginModal');
+
+            if (u === dirUser && p === dirPass) {
+                currentUser = { role: 'director' };
+                renderDirectorDashboard();
+            } else if (u === recUser && p === recPass) {
+                currentUser = { role: 'receptionist' };
+                renderReceptionistPanel();
+            } else {
+                // Check Doctor Logins
+                let docMatch = Object.entries(doctorsList).find(([id, doc]) => doc.username === u && doc.password === p);
+                if (docMatch) {
+                    const [docId, doc] = docMatch;
+                    
+                    // Working Time Enforcement
+                    if (!isDoctorWorkingNow(doc)) {
+                        alert("Working hours ended. Access denied.");
+                        return;
+                    }
+                    currentUser = { role: 'doctor', id: docId, ...doc };
+                    renderDoctorConsole();
+                } else {
+                    alert("Invalid Credentials!");
+                }
+            }
+        });
+
+        // Working hours checker
+        function isDoctorWorkingNow(doc) {
+            if (!doc.workDays || !doc.startTime || !doc.endTime) return true;
+            const now = new Date();
+            const currentDay = now.getDay().toString(); // 0-6
+            if (!doc.workDays.includes(currentDay)) return false;
+
+            const [sH, sM] = doc.startTime.split(':').map(Number);
+            const [eH, eM] = doc.endTime.split(':').map(Number);
+            
+            const startMin = sH * 60 + sM;
+            const endMin = eH * 60 + eM;
+            const nowMin = now.getHours() * 60 + now.getMinutes();
+
+            // Vacation Check
+            if (doc.vacationStart && doc.vacationEnd) {
+                const todayStr = now.toISOString().split('T')[0];
+                if (todayStr >= doc.vacationStart && todayStr <= doc.vacationEnd) return false;
+            }
+
+            return nowMin >= startMin && nowMin <= endMin;
+        }
+
+        // Dynamic Dropdowns for Public & Reception
+        function populateDoctorDropdowns() {
+            const select = document.getElementById('bookingDoctorSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Choose Doctor --</option>';
+
+            Object.entries(doctorsList).forEach(([id, doc]) => {
+                const pendingCount = Object.values(ticketsList).filter(t => t.doctorId === id && t.status === 'active').length;
+                select.innerHTML += `<option value="${id}">${doc.firstName} ${doc.lastName} (${doc.specialty}) - Pending: ${pendingCount}</option>`;
+            });
+        }
+
+        // Public Ticket Booking Workflow
+        function openBookingModal() {
+            populateDoctorDropdowns();
+            document.getElementById('bookingModal').classList.add('active');
+        }
+
+        document.getElementById('bookingDoctorSelect').addEventListener('change', (e) => {
+            const docId = e.target.value;
+            if (!docId) return;
+            const docTickets = Object.values(ticketsList).filter(t => t.doctorId === docId);
+            const nextNum = docTickets.length + 1;
+            document.getElementById('estimatedTicketNum').innerText = `#${nextNum}`;
+        });
+
+        let pendingBookingData = null;
+        document.getElementById('bookingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const docId = document.getElementById('bookingDoctorSelect').value;
+            const fn = document.getElementById('bookingFirstName').value.trim();
+            const ln = document.getElementById('bookingLastName').value.trim();
+
+            const docTickets = Object.values(ticketsList).filter(t => t.doctorId === docId);
+            const ticketNum = docTickets.length + 1;
+
+            pendingBookingData = {
+                doctorId: docId,
+                patientName: `${fn} ${ln}`,
+                number: ticketNum,
+                status: 'unactivated', // Requires reception payment
+                createdAt: new Date().toISOString()
+            };
+
+            closeModal('bookingModal');
+            document.getElementById('confirmBookingModal').classList.add('active');
+        });
+
+        document.getElementById('confirmBookingBtn').addEventListener('click', async () => {
+            if (pendingBookingData) {
+                const newRef = push(ref(db, 'tickets'));
+                await set(newRef, pendingBookingData);
+                alert(`Booking Successful! Your ticket is #${pendingBookingData.number}. Please pay at reception upon arrival.`);
+                pendingBookingData = null;
+                closeModal('confirmBookingModal');
+            }
+        });
+
+        // Info Modal & Map Setup
+        document.getElementById('infoBtn').addEventListener('click', () => {
+            document.getElementById('infoModal').classList.add('active');
+            setTimeout(() => {
+                if (!mapInstance) {
+                    mapInstance = L.map('map').setView([clinicData.lat || 41.2995, clinicData.lng || 69.2401], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+                    L.marker([clinicData.lat || 41.2995, clinicData.lng || 69.2401]).addTo(mapInstance);
+                }
+            }, 300);
+        });
+
+        // --- DIRECTOR DASHBOARD ---
+        function renderDirectorDashboard() {
+            const container = document.getElementById('portalContainer');
+            container.innerHTML = `
+                <div class="panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2><i class="fa-solid fa-user-gear"></i> Director Dashboard</h2>
+                        <div>
+                            <button class="btn btn-primary" id="openSettingsBtn"><i class="fa-solid fa-gear"></i> Settings</button>
+                            <button class="btn btn-danger" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Exit</button>
+                        </div>
+                    </div>
+
+                    <h3>Doctor Management</h3>
+                    <button class="btn btn-success" id="addDocBtn" style="margin: 10px 0;"><i class="fa-solid fa-plus"></i> Add New Doctor</button>
+                    <table class="board-table" style="background: white; color: #333; border: 1px solid #ddd; margin-bottom: 30px;">
+                        <thead>
+                            <tr style="background: #f1f5f9; color: #333;">
+                                <th>Name</th>
+                                <th>Specialty</th>
+                                <th>Hours</th>
+                                <th>Login / Pass</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="directorDocTbody"></tbody>
+                    </table>
+
+                    <h3>Analytics & Throughput</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 15px;">
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px;">
+                            <h4>Patient Count Per Doctor</h4>
+                            <div id="doctorCounters" style="margin-top: 10px;"></div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px;">
+                            <h4>30-Day Aggregate Traffic</h4>
+                            <canvas id="analyticsChart" style="max-height: 250px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal" id="settingsModal">
+                    <div class="modal-content">
+                        <span class="close-btn" onclick="closeModal('settingsModal')">&times;</span>
+                        <h3>System & Clinic Settings</h3>
+                        <form id="settingsForm" style="margin-top: 15px;">
+                            <div class="form-group">
+                                <label>Clinic Name</label>
+                                <input type="text" class="form-control" id="cfgClinicName" value="${clinicData.name || ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Clinic Description</label>
+                                <textarea class="form-control" id="cfgClinicDesc">${clinicData.desc || ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Clinic Photo</label>
+                                <input type="file" class="form-control" id="cfgClinicPhoto" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Pin Location on Map</label>
+                                <div id="adminMapPicker"></div>
+                            </div>
+                            <hr style="margin: 15px 0;">
+                            <h4>Change Credentials</h4>
+                            <div class="form-group">
+                                <label>Director Username</label>
+                                <input type="text" class="form-control" id="cfgDirUser" value="aaa">
+                            </div>
+                            <div class="form-group">
+                                <label>Director New Password</label>
+                                <input type="password" class="form-control" id="cfgDirPass1">
+                            </div>
+                            <div class="form-group">
+                                <label>Confirm Password</label>
+                                <input type="password" class="form-control" id="cfgDirPass2">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Global Settings</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="modal" id="doctorModal">
+                    <div class="modal-content">
+                        <span class="close-btn" onclick="closeModal('doctorModal')">&times;</span>
+                        <h3 id="docModalTitle">Add Doctor</h3>
+                        <form id="doctorForm" style="margin-top: 15px;">
+                            <input type="hidden" id="docEditId">
+                            <div class="form-group"><label>First Name</label><input type="text" class="form-control" id="docFN" required></div>
+                            <div class="form-group"><label>Last Name</label><input type="text" class="form-control" id="docLN" required></div>
+                            <div class="form-group"><label>Specialty</label><input type="text" class="form-control" id="docSpec" required></div>
+                            <div class="form-group"><label>Room Number</label><input type="text" class="form-control" id="docRoom" required></div>
+                            <div class="form-group"><label>Portal Username</label><input type="text" class="form-control" id="docUser" required></div>
+                            <div class="form-group"><label>Portal Password</label><input type="text" class="form-control" id="docPass" required></div>
+                            <div style="display: flex; gap: 10px;">
+                                <div class="form-group" style="flex:1;"><label>Start Time</label><input type="time" class="form-control" id="docStart" value="08:00" required></div>
+                                <div class="form-group" style="flex:1;"><label>End Time</label><input type="time" class="form-control" id="docEnd" value="17:00" required></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Working Days (0=Sun, 1=Mon, ..., 6=Sat)</label>
+                                <input type="text" class="form-control" id="docDays" value="1,2,3,4,5" placeholder="1,2,3,4,5">
+                            </div>
+                            <div class="form-group">
+                                <label>Vacation Start Date</label>
+                                <input type="date" class="form-control" id="docVacStart">
+                            </div>
+                            <div class="form-group">
+                                <label>Vacation End Date</label>
+                                <input type="date" class="form-control" id="docVacEnd">
+                            </div>
+                            <button type="submit" class="btn btn-success" style="width: 100%;">Save Doctor</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            renderDoctorManagementTable();
+            renderAnalytics();
+
+            // Settings Handler
+            document.getElementById('openSettingsBtn').addEventListener('click', () => {
+                document.getElementById('settingsModal').classList.add('active');
+                setTimeout(() => {
+                    if (!adminMapInstance) {
+                        const lat = clinicData.lat || 41.2995;
+                        const lng = clinicData.lng || 69.2401;
+                        adminMapInstance = L.map('adminMapPicker').setView([lat, lng], 13);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMapInstance);
+                        adminMarker = L.marker([lat, lng], { draggable: true }).addTo(adminMapInstance);
+                    }
+                }, 300);
+            });
+
+            document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('cfgClinicName').value;
+                const desc = document.getElementById('cfgClinicDesc').value;
+                const photoFile = document.getElementById('cfgClinicPhoto').files[0];
+                const pos = adminMarker ? adminMarker.getLatLng() : { lat: 41.2995, lng: 69.2401 };
+
+                let photoUrl = clinicData.photo || '';
+                if (photoFile) {
+                    const storageRef = sRef(storage, `clinic/${photoFile.name}`);
+                    await uploadBytes(storageRef, photoFile);
+                    photoUrl = await getDownloadURL(storageRef);
+                }
+
+                await set(ref(db, 'settings'), { name, desc, photo: photoUrl, lat: pos.lat, lng: pos.lng });
+
+                const p1 = document.getElementById('cfgDirPass1').value;
+                const p2 = document.getElementById('cfgDirPass2').value;
+                const u = document.getElementById('cfgDirUser').value;
+
+                if (p1 && p1 === p2) {
+                    await update(ref(db, 'auth'), { dirUser: u, dirPass: p1 });
+                }
+
+                alert("Settings Updated!");
+                closeModal('settingsModal');
+            });
+
+            document.getElementById('addDocBtn').addEventListener('click', () => {
+                document.getElementById('docEditId').value = '';
+                document.getElementById('doctorForm').reset();
+                document.getElementById('docModalTitle').innerText = 'Add Doctor';
+                document.getElementById('doctorModal').classList.add('active');
+            });
+
+            document.getElementById('doctorForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('docEditId').value || push(ref(db, 'doctors')).key;
+                const docObj = {
+                    firstName: document.getElementById('docFN').value,
+                    lastName: document.getElementById('docLN').value,
+                    specialty: document.getElementById('docSpec').value,
+                    room: document.getElementById('docRoom').value,
+                    username: document.getElementById('docUser').value,
+                    password: document.getElementById('docPass').value,
+                    startTime: document.getElementById('docStart').value,
+                    endTime: document.getElementById('docEnd').value,
+                    workDays: document.getElementById('docDays').value.split(','),
+                    vacationStart: document.getElementById('docVacStart').value || '',
+                    vacationEnd: document.getElementById('docVacEnd').value || ''
+                };
+                await set(ref(db, `doctors/${id}`), docObj);
+                closeModal('doctorModal');
+            });
+        }
+
+        function renderDoctorManagementTable() {
+            const tbody = document.getElementById('directorDocTbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            Object.entries(doctorsList).forEach(([id, doc]) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${doc.firstName} ${doc.lastName}</td>
+                        <td>${doc.specialty}</td>
+                        <td>${doc.startTime} - ${doc.endTime}</td>
+                        <td>${doc.username} / ****</td>
+                        <td>
+                            <button class="btn btn-warning" onclick="editDoc('${id}')"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn btn-danger" onclick="deleteDoc('${id}')"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.editDoc = (id) => {
+            const doc = doctorsList[id];
+            document.getElementById('docEditId').value = id;
+            document.getElementById('docFN').value = doc.firstName;
+            document.getElementById('docLN').value = doc.lastName;
+            document.getElementById('docSpec').value = doc.specialty;
+            document.getElementById('docRoom').value = doc.room;
+            document.getElementById('docUser').value = doc.username;
+            document.getElementById('docPass').value = doc.password;
+            document.getElementById('docStart').value = doc.startTime;
+            document.getElementById('docEnd').value = doc.endTime;
+            document.getElementById('docDays').value = (doc.workDays || []).join(',');
+            document.getElementById('docVacStart').value = doc.vacationStart || '';
+            document.getElementById('docVacEnd').value = doc.vacationEnd || '';
+            document.getElementById('docModalTitle').innerText = 'Edit Doctor';
+            document.getElementById('doctorModal').classList.add('active');
+        };
+
+        window.deleteDoc = async (id) => {
+            if (confirm("Are you sure you want to delete this doctor?")) {
+                await remove(ref(db, `doctors/${id}`));
+            }
+        };
+
+        function renderAnalytics() {
+            const counters = document.getElementById('doctorCounters');
+            if (!counters) return;
+            counters.innerHTML = '';
+
+            const completedTickets = Object.values(ticketsList).filter(t => t.status === 'completed');
+
+            Object.entries(doctorsList).forEach(([id, doc]) => {
+                const count = completedTickets.filter(t => t.doctorId === id).length;
+                counters.innerHTML += `<div style="display:flex; justify-between; padding: 5px 0;"><span>${doc.firstName} ${doc.lastName}:</span> <strong>${count} Patients</strong></div>`;
+            });
+
+            // Render Chart
+            const ctx = document.getElementById('analyticsChart');
+            if (ctx) {
+                if (chartInstance) chartInstance.destroy();
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.values(doctorsList).map(d => d.lastName),
+                        datasets: [{
+                            label: 'Completed Consultations',
+                            data: Object.keys(doctorsList).map(id => completedTickets.filter(t => t.doctorId === id).length),
+                            backgroundColor: '#0056b3'
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+            }
+        }
+
+        // --- RECEPTIONIST PANEL ---
+        function renderReceptionistPanel() {
+            const container = document.getElementById('portalContainer');
+            container.innerHTML = `
+                <div class="panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2><i class="fa-solid fa-id-card"></i> Receptionist Panel</h2>
+                        <div>
+                            <button class="btn btn-warning" id="recSettingsBtn"><i class="fa-solid fa-key"></i> Password</button>
+                            <button class="btn btn-danger" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Exit</button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">
+                        <div>
+                            <h3>Walk-In Offline Queue Generation</h3>
+                            <form id="recWalkInForm" style="margin-top: 15px;">
+                                <div class="form-group">
+                                    <label>Doctor</label>
+                                    <select class="form-control" id="recDocSelect" required></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Patient First Name</label>
+                                    <input type="text" class="form-control" id="recFN" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Patient Last Name</label>
+                                    <input type="text" class="form-control" id="recLN" required>
+                                </div>
+                                <button type="submit" class="btn btn-success" style="width: 100%;">Create & Print Ticket</button>
+                            </form>
+                        </div>
+
+                        <div>
+                            <h3>Process Online Booking Payments</h3>
+                            <div style="margin-top: 15px;">
+                                <table class="board-table" style="background: white; color: #333; border: 1px solid #ddd;">
+                                    <thead>
+                                        <tr style="background: #f1f5f9; color: #333;">
+                                            <th>Ticket</th>
+                                            <th>Patient</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recTicketsTbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Populate Doc Select
+            const docSel = document.getElementById('recDocSelect');
+            docSel.innerHTML = '<option value="">-- Choose Doctor --</option>';
+            Object.entries(doctorsList).forEach(([id, doc]) => {
+                docSel.innerHTML += `<option value="${id}">${doc.firstName} ${doc.lastName} (${doc.specialty})</option>`;
+            });
+
+            // Walk-in form submit
+            document.getElementById('recWalkInForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const docId = docSel.value;
+                const fn = document.getElementById('recFN').value;
+                const ln = document.getElementById('recLN').value;
+
+                const docTickets = Object.values(ticketsList).filter(t => t.doctorId === docId);
+                const ticketNum = docTickets.length + 1;
+
+                const newTicket = {
+                    doctorId: docId,
+                    patientName: `${fn} ${ln}`,
+                    number: ticketNum,
+                    status: 'active', // Paid & Active
+                    createdAt: new Date().toISOString()
+                };
+
+                const newRef = push(ref(db, 'tickets'));
+                await set(newRef, newTicket);
+
+                printTicketReceipt(newTicket, doctorsList[docId]);
+            });
+
+            // Render Tickets for Activation
+            const tbody = document.getElementById('recTicketsTbody');
+            tbody.innerHTML = '';
+            Object.entries(ticketsList).forEach(([id, t]) => {
+                if (t.status === 'unactivated' || t.status === 'expired') {
+                    const doc = doctorsList[t.doctorId] || {};
+                    const isExpired = t.status === 'expired';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>#${t.number}</td>
+                            <td>${t.patientName}</td>
+                            <td><span style="color: ${isExpired ? 'red' : 'orange'};">${t.status}</span></td>
+                            <td>
+                                ${isExpired ? '<button class="btn btn-danger" disabled>Expired</button>' : 
+                                `<button class="btn btn-primary" onclick="activateTicket('${id}')">Activate & Print</button>`}
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+
+            document.getElementById('recSettingsBtn').addEventListener('click', async () => {
+                const p = prompt("Enter new password for Receptionist:");
+                if (p) {
+                    await update(ref(db, 'auth'), { recPass: p });
+                    alert("Password Updated!");
+                }
+            });
+        }
+
+        window.activateTicket = async (ticketId) => {
+            const ticket = ticketsList[ticketId];
+            if (!ticket) return;
+
+            await update(ref(db, `tickets/${ticketId}`), { status: 'active' });
+            printTicketReceipt(ticket, doctorsList[ticket.doctorId]);
+        };
+
+        function printTicketReceipt(ticket, doc) {
+            const printDiv = document.getElementById('printableTicket');
+            printDiv.innerHTML = `
+                <div class="ticket-receipt">
+                    <h2>${clinicData.name || 'UZB Hospital'}</h2>
+                    <p>--------------------------------</p>
+                    <h1>Ticket #${ticket.number}</h1>
+                    <p>--------------------------------</p>
+                    <p><strong>Patient:</strong> ${ticket.patientName}</p>
+                    <p><strong>Doctor:</strong> ${doc ? doc.firstName + ' ' + doc.lastName : ''}</p>
+                    <p><strong>Specialty:</strong> ${doc ? doc.specialty : ''}</p>
+                    <p><strong>Room:</strong> ${doc ? doc.room : ''}</p>
+                    <p>--------------------------------</p>
+                    <p>${new Date().toLocaleString()}</p>
+                    <button class="btn btn-primary" onclick="window.print()" style="margin-top:10px;">PRINT (печать)</button>
+                </div>
+            `;
+            printDiv.style.display = 'block';
+            window.print();
+            printDiv.style.display = 'none';
+        }
+
+        // --- DOCTOR CONSOLE ---
+        function renderDoctorConsole() {
+            const doc = currentUser;
+            const container = document.getElementById('portalContainer');
+
+            // Find current active consultation or next in line
+            const docTickets = Object.entries(ticketsList)
+                .filter(([id, t]) => t.doctorId === doc.id)
+                .map(([id, t]) => ({ id, ...t }))
+                .sort((a, b) => a.number - b.number);
+
+            let activeConsultation = docTickets.find(t => t.status === 'in-consultation' || t.status === 'called');
+            let nextActive = docTickets.find(t => t.status === 'active');
+
+            container.innerHTML = `
+                <div class="panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <h2>Doctor Portal - Dr. ${doc.firstName} ${doc.lastName}</h2>
+                            <p style="color: var(--secondary-color); font-weight: bold;">${doc.specialty} (Room ${doc.room})</p>
+                        </div>
+                        <button class="btn btn-danger" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Exit</button>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 30px; border-radius: 8px; text-align: center; max-width: 600px; margin: 0 auto;">
+                        <h3>CURRENT CONSULTATION</h3>
+                        <h1 style="font-size: 60px; color: var(--primary-color); margin: 15px 0;">
+                            ${activeConsultation ? `#${activeConsultation.number}` : 'No Active Patient'}
+                        </h1>
+                        <p style="font-size: 20px; font-weight: bold; margin-bottom: 25px;">
+                            Patient: ${activeConsultation ? activeConsultation.patientName : '-'}
+                        </p>
+
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button class="btn btn-success" id="departedBtn" ${!activeConsultation ? 'disabled' : ''} style="font-size: 18px; padding: 15px 25px;">
+                                <i class="fa-solid fa-check"></i> Patient Departed
+                            </button>
+                            <button class="btn btn-warning" id="noShowBtn" disabled style="font-size: 18px; padding: 15px 25px;">
+                                <i class="fa-solid fa-user-slash"></i> Did Not Show Up
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Enable "Did Not Show Up" button after 5 mins timer
+            if (activeConsultation) {
+                setTimeout(() => {
+                    const noShowBtn = document.getElementById('noShowBtn');
+                    if (noShowBtn) noShowBtn.disabled = false;
+                }, 5 * 60 * 1000); // 5 Minutes
+            }
+
+            // Departed Click Handler
+            document.getElementById('departedBtn')?.addEventListener('click', async () => {
+                if (activeConsultation) {
+                    await update(ref(db, `tickets/${activeConsultation.id}`), { status: 'completed' });
+                }
+                await callNextPatient(doc, docTickets);
+            });
+
+            // No Show Click Handler
+            document.getElementById('noShowBtn')?.addEventListener('click', async () => {
+                if (activeConsultation) {
+                    await update(ref(db, `tickets/${activeConsultation.id}`), { status: 'skipped' });
+                }
+                await callNextPatient(doc, docTickets);
+            });
+        }
+
+        // Logic for calling next patient + Skipping unactivated tickets
+        async function callNextPatient(doc, docTickets) {
+            // Find next candidate ticket
+            let skippedUnactivated = [];
+            let nextTicket = null;
+
+            for (let t of docTickets) {
+                if (t.status === 'unactivated') {
+                    // Permanently expire unactivated ticket when its turn is reached
+                    await update(ref(db, `tickets/${t.id}`), { status: 'expired' });
+                    skippedUnactivated.push(t.number);
+                } else if (t.status === 'active') {
+                    nextTicket = t;
+                    break;
+                }
+            }
+
+            if (skippedUnactivated.length > 0 && nextTicket) {
+                const banner = document.getElementById('skippingBanner');
+                banner.innerText = `Ticket #${skippedUnactivated.join(', #')} is unactivated. Ticket #${nextTicket.number}, please enter Doctor's office.`;
+                banner.style.display = 'block';
+                setTimeout(() => { banner.style.display = 'none'; }, 8000);
+            }
+
+            if (nextTicket) {
+                // Set Priority Animation on Board
+                await update(ref(db, `doctors/${doc.id}`), { priority: true });
+                await update(ref(db, `tickets/${nextTicket.id}`), { status: 'called' });
+                playChime();
+
+                // Clear priority highlight after 10 seconds
+                setTimeout(async () => {
+                    await update(ref(db, `doctors/${doc.id}`), { priority: false });
+                }, 10000);
+            } else {
+                alert("No more patients in queue!");
+            }
+        }
+
+        // Init Data Execution
+        initDataListeners();
+    </script>
+</body>
+</html>
