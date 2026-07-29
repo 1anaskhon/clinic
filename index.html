@@ -698,8 +698,8 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
    ========================================================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getDatabase, ref, onValue, set, get, update, push, remove, child
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  getFirestore, doc, collection, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getStorage, ref as sRef, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
@@ -714,7 +714,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const db = getFirestore(app);
 const storage = getStorage(app);
 
 /* =========================================================
@@ -946,24 +946,30 @@ function ticketsForDoctor(doctorId){
 /* =========================================================
    FIREBASE LISTENERS
    ========================================================= */
-onValue(ref(db,"config"), (snap)=>{
-  CONFIG = snap.val() || {};
+onSnapshot(doc(db,"config","main"), (snap)=>{
+  CONFIG = snap.exists() ? snap.data() : {};
   applyConfigToUI();
-});
-onValue(ref(db,"doctors"), (snap)=>{
-  DOCTORS = snap.val() || {};
+}, (err)=> showToast(firebaseErrorMessage(err)));
+
+onSnapshot(collection(db,"doctors"), (snap)=>{
+  const obj = {};
+  snap.forEach(d=>{ obj[d.id] = d.data(); });
+  DOCTORS = obj;
   renderBoard();
   if(!directorDash.classList.contains("hidden")) renderDirectorDoctorList();
   if(!receptionDash.classList.contains("hidden")) renderWalkInDoctorGrid();
   if(!doctorDash.classList.contains("hidden")) renderDoctorSelfGrid();
   if(!bookingOverlay.classList.contains("hidden") && bookStep1 && !bookStep1.classList.contains("hidden")) renderBookingDoctorList();
-});
-onValue(ref(db,"tickets"), (snap)=>{
-  TICKETS = snap.val() || {};
+}, (err)=> showToast(firebaseErrorMessage(err)));
+
+onSnapshot(collection(db,"tickets"), (snap)=>{
+  const obj = {};
+  snap.forEach(d=>{ obj[d.id] = d.data(); });
+  TICKETS = obj;
   renderBoard();
   if(!receptionDash.classList.contains("hidden")) renderPendingList();
   if(currentDoctorSelfId) renderDoctorConsole();
-});
+}, (err)=> showToast(firebaseErrorMessage(err)));
 
 /* =========================================================
    CONFIG -> UI
@@ -1280,9 +1286,8 @@ $("bookNo").addEventListener("click", ()=> hide("bookingOverlay"));
 $("bookYes").addEventListener("click", async ()=>{
   const first = $("bookFirst").value.trim(), last=$("bookLast").value.trim();
   const number = getNextTicketNumber(selectedBookingDoctor);
-  const newRef = push(ref(db,"tickets"));
   try{
-    await set(newRef, {
+    await addDoc(collection(db,"tickets"), {
       doctorId: selectedBookingDoctor,
       number, patientFirst:first, patientLast:last,
       status:"pending_payment", source:"online",
@@ -1313,13 +1318,13 @@ async function callNextForDoctor(doctorId){
   const toExpire = dts.filter(tk=>tk.status==="pending_payment" && tk.number < next.number);
   let skippedInfo = null;
   for(const tk of toExpire){
-    await update(ref(db,"tickets/"+tk.id), {status:"expired"});
+    await updateDoc(doc(db,"tickets",tk.id), {status:"expired"});
     skippedInfo = {skipped:tk.number, next:next.number};
   }
-  await update(ref(db,"tickets/"+next.id), {status:"calling", calledAt:Date.now()});
+  await updateDoc(doc(db,"tickets",next.id), {status:"calling", calledAt:Date.now()});
   const updates = {lastCalledAt: Date.now(), currentCallTime: Date.now()};
   if(skippedInfo){ updates.skipInfo = {skipped:skippedInfo.skipped, next:skippedInfo.next, ts:Date.now(), date:todayStr()}; }
-  await update(ref(db,"doctors/"+doctorId), updates);
+  await updateDoc(doc(db,"doctors",doctorId), updates);
   return next;
  }catch(err){
   showToast(firebaseErrorMessage(err));
@@ -1332,7 +1337,7 @@ async function markPatientDeparted(doctorId){
   const dts = ticketsForDoctor(doctorId);
   const cur = dts.find(tk=>tk.status==="calling" || tk.status==="in_consultation");
   if(cur){
-    await update(ref(db,"tickets/"+cur.id), {status:"completed", completedAt:Date.now()});
+    await updateDoc(doc(db,"tickets",cur.id), {status:"completed", completedAt:Date.now()});
   }
   await callNextForDoctor(doctorId);
  }catch(err){
@@ -1345,7 +1350,7 @@ async function markPatientNoShow(doctorId){
   const dts = ticketsForDoctor(doctorId);
   const cur = dts.find(tk=>tk.status==="calling");
   if(cur){
-    await update(ref(db,"tickets/"+cur.id), {status:"noshow", noshowAt:Date.now()});
+    await updateDoc(doc(db,"tickets",cur.id), {status:"noshow", noshowAt:Date.now()});
   }
   await callNextForDoctor(doctorId);
  }catch(err){
@@ -1465,10 +1470,9 @@ $("saveDoctorBtn").addEventListener("click", async ()=>{
   };
   try{
     if(editingDoctorId){
-      await update(ref(db,"doctors/"+editingDoctorId), payload);
+      await updateDoc(doc(db,"doctors",editingDoctorId), payload);
     } else {
-      const newRef = push(ref(db,"doctors"));
-      await set(newRef, payload);
+      await addDoc(collection(db,"doctors"), payload);
     }
     hide("doctorEditOverlay");
     showToast(t("save")+" ✓", false);
@@ -1479,7 +1483,7 @@ $("saveDoctorBtn").addEventListener("click", async ()=>{
 $("deleteDoctorBtn").addEventListener("click", async ()=>{
   if(editingDoctorId){
     try{
-      await remove(ref(db,"doctors/"+editingDoctorId));
+      await deleteDoc(doc(db,"doctors",editingDoctorId));
       hide("doctorEditOverlay");
     }catch(err){
       showToast(firebaseErrorMessage(err));
@@ -1550,7 +1554,7 @@ $("saveSettingsBtn").addEventListener("click", async ()=>{
       const url = await getDownloadURL(storageReference);
       updates.clinicPhoto = url;
     }
-    await update(ref(db,"config"), updates);
+    await setDoc(doc(db,"config","main"), updates, {merge:true});
     hide("settingsOverlay");
     showToast(t("saveSettings")+" ✓", false);
   }catch(err){
@@ -1584,7 +1588,7 @@ $("recProfileSave").addEventListener("click", async ()=>{
   const updates = {receptionistLogin: login||"bbb"};
   if(pass) updates.receptionistPass = pass;
   try{
-    await update(ref(db,"config"), updates);
+    await setDoc(doc(db,"config","main"), updates, {merge:true});
     hide("recProfileOverlay");
   }catch(err){
     $("recProfileError").textContent = firebaseErrorMessage(err);
@@ -1612,13 +1616,12 @@ $("createWalkInBtn").addEventListener("click", async ()=>{
   const first = $("wiFirst").value.trim(), last = $("wiLast").value.trim();
   if(!walkInSelectedDoctor || !first || !last) return;
   const number = getNextTicketNumber(walkInSelectedDoctor);
-  const newRef = push(ref(db,"tickets"));
   const ticketData = {
     doctorId: walkInSelectedDoctor, number, patientFirst:first, patientLast:last,
     status:"active", source:"walkin", date:todayStr(), createdAt:Date.now(), activatedAt:Date.now()
   };
   try{
-    await set(newRef, ticketData);
+    await addDoc(collection(db,"tickets"), ticketData);
     printTicket({...ticketData, doctor:DOCTORS[walkInSelectedDoctor]});
     $("wiFirst").value=""; $("wiLast").value="";
     hide("walkInForm");
@@ -1635,16 +1638,16 @@ function renderPendingList(){
   if(pending.length===0){ wrap.innerHTML = `<p style="color:var(--muted);font-size:13px;">${t("noPending")}</p>`; return; }
   wrap.innerHTML = "";
   pending.forEach(([id,tk])=>{
-    const doc = DOCTORS[tk.doctorId]||{};
+    const doctorObj = DOCTORS[tk.doctorId]||{};
     const div = document.createElement("div");
     div.className = "list-item";
     div.innerHTML = `<div><div style="font-weight:700;">#${tk.number} — ${tk.patientFirst} ${tk.patientLast}</div>
-      <div class="meta">${doc.firstName||""} ${doc.lastName||""} · ${doc.specialty||""}</div></div>
+      <div class="meta">${doctorObj.firstName||""} ${doctorObj.lastName||""} · ${doctorObj.specialty||""}</div></div>
       <button class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i> ${t("activate")}</button>`;
     div.querySelector("button").addEventListener("click", async ()=>{
       try{
-        await update(ref(db,"tickets/"+id), {status:"active", activatedAt:Date.now()});
-        printTicket({...tk, doctor:doc});
+        await updateDoc(doc(db,"tickets",id), {status:"active", activatedAt:Date.now()});
+        printTicket({...tk, doctor:doctorObj});
       }catch(err){
         showToast(firebaseErrorMessage(err));
       }
@@ -1708,14 +1711,14 @@ function renderDoctorSelfGrid(){
 
 function renderDoctorConsole(){
   if(!currentDoctorSelfId) return;
-  const doc = DOCTORS[currentDoctorSelfId];
-  if(!doc){ return; }
-  $("docSelfName").textContent = "Dr. "+doc.firstName+" "+doc.lastName;
-  $("docSelfSpec").textContent = doc.specialty||"";
+  const docSelf = DOCTORS[currentDoctorSelfId];
+  if(!docSelf){ return; }
+  $("docSelfName").textContent = "Dr. "+docSelf.firstName+" "+docSelf.lastName;
+  $("docSelfSpec").textContent = docSelf.specialty||"";
 
   const dts = ticketsForDoctor(currentDoctorSelfId);
   const hasInsidePatient = dts.some(tk=>tk.status==="calling"||tk.status==="in_consultation");
-  const canWork = withinWorkingHours(doc) || hasInsidePatient;
+  const canWork = withinWorkingHours(docSelf) || hasInsidePatient;
 
   if(!canWork){
     hide("docActiveWrap"); show("docBlockedWrap");
@@ -1727,7 +1730,7 @@ function renderDoctorConsole(){
   if(current){
     $("currentTicketNum").textContent = "#"+current.number;
     $("currentPatientName").textContent = current.patientFirst+" "+current.patientLast;
-    $("currentRoomTag").textContent = doc.room ? (t("room")+" "+doc.room) : "";
+    $("currentRoomTag").textContent = docSelf.room ? (t("room")+" "+docSelf.room) : "";
     $("callNextBtn").disabled = true;
     $("callNextBtn").style.opacity = .5;
   } else {
@@ -1739,7 +1742,7 @@ function renderDoctorConsole(){
   }
 
   // no-show button enabled 5 min after last call
-  const callTime = doc.currentCallTime || 0;
+  const callTime = docSelf.currentCallTime || 0;
   const elapsed = Date.now() - callTime;
   const enableNoShow = current && elapsed >= 5*60*1000;
   $("patientNoShowBtn").disabled = !enableNoShow;
