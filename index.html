@@ -867,6 +867,30 @@ function todayStr(d){ d = d || new Date(); return d.toISOString().slice(0,10); }
 function pad(n){ return n<10 ? "0"+n : ""+n; }
 function nowHM(){ const d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); }
 
+function showToast(msg, isError){
+  isError = isError !== false;
+  let el = document.getElementById("appToast");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "appToast";
+    el.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);color:#fff;padding:13px 20px;border-radius:10px;font-size:13.5px;font-weight:600;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:90vw;text-align:center;line-height:1.4;";
+    document.body.appendChild(el);
+  }
+  el.style.background = isError ? "#E63946" : "#2A9D63";
+  el.textContent = msg;
+  el.style.display = "block";
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(()=>{ el.style.display = "none"; }, 5000);
+}
+function firebaseErrorMessage(err){
+  console.error("Firebase error:", err);
+  const code = (err && err.code) || "";
+  if(code.includes("PERMISSION_DENIED") || code.includes("permission-denied")){
+    return "Firebase: yozishga ruxsat yo'q (PERMISSION_DENIED). Realtime Database qoidalarini (Rules) tekshiring — .write true bo'lishi kerak, chunki bu ilovada Firebase Auth ishlatilmagan.";
+  }
+  return "Firebase xatosi: " + (err && err.message ? err.message : String(err));
+}
+
 function playChime(){
   try{
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1257,14 +1281,18 @@ $("bookYes").addEventListener("click", async ()=>{
   const first = $("bookFirst").value.trim(), last=$("bookLast").value.trim();
   const number = getNextTicketNumber(selectedBookingDoctor);
   const newRef = push(ref(db,"tickets"));
-  await set(newRef, {
-    doctorId: selectedBookingDoctor,
-    number, patientFirst:first, patientLast:last,
-    status:"pending_payment", source:"online",
-    date: todayStr(), createdAt: Date.now()
-  });
-  $("bookSuccessText").textContent = t("bookSuccess");
-  goBookStep(4);
+  try{
+    await set(newRef, {
+      doctorId: selectedBookingDoctor,
+      number, patientFirst:first, patientLast:last,
+      status:"pending_payment", source:"online",
+      date: todayStr(), createdAt: Date.now()
+    });
+    $("bookSuccessText").textContent = t("bookSuccess");
+    goBookStep(4);
+  }catch(err){
+    showToast(firebaseErrorMessage(err));
+  }
 });
 $("bookDone").addEventListener("click", ()=>{
   hide("bookingOverlay");
@@ -1275,20 +1303,15 @@ $("bookDone").addEventListener("click", ()=>{
    QUEUE ENGINE (shared logic used by doctor console)
    ========================================================= */
 async function callNextForDoctor(doctorId){
+ try{
   const dts = ticketsForDoctor(doctorId);
-  // find first ticket after current in ascending order that's status active, skipping pending_payment ones (expiring them)
-  let skippedInfo = null;
-  for(const tk of dts){
-    if(tk.status==="pending_payment"){
-      // expire it as we pass over it during a call-next sweep only if a ticket with a higher number is being called instead
-    }
-  }
   // Determine candidate: smallest-numbered 'active' ticket
   const activeCandidates = dts.filter(tk=>tk.status==="active").sort((a,b)=>a.number-b.number);
   if(activeCandidates.length===0) return null;
   const next = activeCandidates[0];
   // any pending_payment tickets with number < next.number are now expired (their turn passed)
   const toExpire = dts.filter(tk=>tk.status==="pending_payment" && tk.number < next.number);
+  let skippedInfo = null;
   for(const tk of toExpire){
     await update(ref(db,"tickets/"+tk.id), {status:"expired"});
     skippedInfo = {skipped:tk.number, next:next.number};
@@ -1298,24 +1321,36 @@ async function callNextForDoctor(doctorId){
   if(skippedInfo){ updates.skipInfo = {skipped:skippedInfo.skipped, next:skippedInfo.next, ts:Date.now(), date:todayStr()}; }
   await update(ref(db,"doctors/"+doctorId), updates);
   return next;
+ }catch(err){
+  showToast(firebaseErrorMessage(err));
+  return null;
+ }
 }
 
 async function markPatientDeparted(doctorId){
+ try{
   const dts = ticketsForDoctor(doctorId);
   const cur = dts.find(tk=>tk.status==="calling" || tk.status==="in_consultation");
   if(cur){
     await update(ref(db,"tickets/"+cur.id), {status:"completed", completedAt:Date.now()});
   }
   await callNextForDoctor(doctorId);
+ }catch(err){
+  showToast(firebaseErrorMessage(err));
+ }
 }
 
 async function markPatientNoShow(doctorId){
+ try{
   const dts = ticketsForDoctor(doctorId);
   const cur = dts.find(tk=>tk.status==="calling");
   if(cur){
     await update(ref(db,"tickets/"+cur.id), {status:"noshow", noshowAt:Date.now()});
   }
   await callNextForDoctor(doctorId);
+ }catch(err){
+  showToast(firebaseErrorMessage(err));
+ }
 }
 
 /* When doctor "calls" a ticket manually the first time, mark it in_consultation once they are actively seeing them.
@@ -1428,18 +1463,27 @@ $("saveDoctorBtn").addEventListener("click", async ()=>{
     lateDelayHours: parseFloat($("docLateDelay").value)||0,
     lateDelayDate: parseFloat($("docLateDelay").value) ? todayStr() : null
   };
-  if(editingDoctorId){
-    await update(ref(db,"doctors/"+editingDoctorId), payload);
-  } else {
-    const newRef = push(ref(db,"doctors"));
-    await set(newRef, payload);
+  try{
+    if(editingDoctorId){
+      await update(ref(db,"doctors/"+editingDoctorId), payload);
+    } else {
+      const newRef = push(ref(db,"doctors"));
+      await set(newRef, payload);
+    }
+    hide("doctorEditOverlay");
+    showToast(t("save")+" ✓", false);
+  }catch(err){
+    showToast(firebaseErrorMessage(err));
   }
-  hide("doctorEditOverlay");
 });
 $("deleteDoctorBtn").addEventListener("click", async ()=>{
   if(editingDoctorId){
-    await remove(ref(db,"doctors/"+editingDoctorId));
-    hide("doctorEditOverlay");
+    try{
+      await remove(ref(db,"doctors/"+editingDoctorId));
+      hide("doctorEditOverlay");
+    }catch(err){
+      showToast(firebaseErrorMessage(err));
+    }
   }
 });
 
@@ -1498,15 +1542,21 @@ $("saveSettingsBtn").addEventListener("click", async ()=>{
   }
   updates.doctorLogin = $("setDocLogin").value.trim() || "ccc";
 
-  const file = $("setClinicPhoto").files[0];
-  if(file){
-    const storageReference = sRef(storage, "clinic/photo_"+Date.now()+"_"+file.name);
-    await uploadBytes(storageReference, file);
-    const url = await getDownloadURL(storageReference);
-    updates.clinicPhoto = url;
+  try{
+    const file = $("setClinicPhoto").files[0];
+    if(file){
+      const storageReference = sRef(storage, "clinic/photo_"+Date.now()+"_"+file.name);
+      await uploadBytes(storageReference, file);
+      const url = await getDownloadURL(storageReference);
+      updates.clinicPhoto = url;
+    }
+    await update(ref(db,"config"), updates);
+    hide("settingsOverlay");
+    showToast(t("saveSettings")+" ✓", false);
+  }catch(err){
+    $("settingsError").textContent = firebaseErrorMessage(err);
+    show("settingsError");
   }
-  await update(ref(db,"config"), updates);
-  hide("settingsOverlay");
 });
 
 /* =========================================================
@@ -1533,8 +1583,13 @@ $("recProfileSave").addEventListener("click", async ()=>{
   if(pass && pass!==confirm){ $("recProfileError").textContent=t("passMismatch"); show("recProfileError"); return; }
   const updates = {receptionistLogin: login||"bbb"};
   if(pass) updates.receptionistPass = pass;
-  await update(ref(db,"config"), updates);
-  hide("recProfileOverlay");
+  try{
+    await update(ref(db,"config"), updates);
+    hide("recProfileOverlay");
+  }catch(err){
+    $("recProfileError").textContent = firebaseErrorMessage(err);
+    show("recProfileError");
+  }
 });
 
 function renderWalkInDoctorGrid(){
@@ -1562,10 +1617,14 @@ $("createWalkInBtn").addEventListener("click", async ()=>{
     doctorId: walkInSelectedDoctor, number, patientFirst:first, patientLast:last,
     status:"active", source:"walkin", date:todayStr(), createdAt:Date.now(), activatedAt:Date.now()
   };
-  await set(newRef, ticketData);
-  printTicket({...ticketData, doctor:DOCTORS[walkInSelectedDoctor]});
-  $("wiFirst").value=""; $("wiLast").value="";
-  hide("walkInForm");
+  try{
+    await set(newRef, ticketData);
+    printTicket({...ticketData, doctor:DOCTORS[walkInSelectedDoctor]});
+    $("wiFirst").value=""; $("wiLast").value="";
+    hide("walkInForm");
+  }catch(err){
+    showToast(firebaseErrorMessage(err));
+  }
 });
 
 function renderPendingList(){
@@ -1583,8 +1642,12 @@ function renderPendingList(){
       <div class="meta">${doc.firstName||""} ${doc.lastName||""} · ${doc.specialty||""}</div></div>
       <button class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i> ${t("activate")}</button>`;
     div.querySelector("button").addEventListener("click", async ()=>{
-      await update(ref(db,"tickets/"+id), {status:"active", activatedAt:Date.now()});
-      printTicket({...tk, doctor:doc});
+      try{
+        await update(ref(db,"tickets/"+id), {status:"active", activatedAt:Date.now()});
+        printTicket({...tk, doctor:doc});
+      }catch(err){
+        showToast(firebaseErrorMessage(err));
+      }
     });
     wrap.appendChild(div);
   });
