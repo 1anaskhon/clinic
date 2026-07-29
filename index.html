@@ -389,6 +389,81 @@ header.topbar{
 .doctor-select-card i{font-size:22px; color:var(--primary); margin-bottom:8px;}
 
 footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:26px; }
+
+/* Dark mode */
+body.dark-mode{
+  --bg:#0B1220;
+  --panel:#121C2E;
+  --line:#1E2A3A;
+  --ink-text:#EAF1FB;
+  --muted:#8EA0BE;
+  --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+}
+body.dark-mode .card,
+body.dark-mode .modal,
+body.dark-mode .dash-head,
+body.dark-mode header.topbar,
+body.dark-mode .lang-dropdown,
+body.dark-mode .icon-btn,
+body.dark-mode .btn-outline,
+body.dark-mode .field input,
+body.dark-mode .field select,
+body.dark-mode .field textarea,
+body.dark-mode .doctor-pick,
+body.dark-mode .doctor-select-card,
+body.dark-mode .list-item,
+body.dark-mode .stat-box,
+body.dark-mode .consult-panel{
+  background:var(--panel);
+  color:var(--ink-text);
+  border-color:var(--line);
+}
+body.dark-mode .tabs{background:#0B1220;}
+body.dark-mode .tab-btn.active{background:var(--panel); color:var(--teal);}
+body.kiosk-mode header.topbar .header-actions .icon-btn:not(#kioskExitBtn),
+body.kiosk-mode .fab,
+body.kiosk-mode footer.app-foot{display:none !important;}
+body.kiosk-mode{cursor:none;}
+body.kiosk-mode .board-wrap{max-width:100%; padding:12px;}
+body.kiosk-mode .board-body{max-height:85vh;}
+.board-row.on-break{
+  opacity:0.55;
+  filter:grayscale(0.7);
+  background:#2A2F3A !important;
+}
+.board-row.on-break .num{color:#8EA0BE !important;}
+.break-note{font-size:11px; color:#FFB020; margin-top:4px;}
+.tg-bar{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  margin:0 auto 14px; max-width:1400px; padding:0 20px;
+  font-size:14px; font-weight:600;
+}
+.tg-bar a{
+  color:#0088cc; text-decoration:none; font-weight:700;
+}
+.tg-bar a:hover{text-decoration:underline;}
+.ticket-id-box{
+  background:#EFF6FF; border:2px solid var(--primary); border-radius:12px;
+  padding:14px; text-align:center; margin:12px 0;
+}
+body.dark-mode .ticket-id-box{background:#0C1A2E; border-color:var(--teal);}
+.ticket-id-box .id-num{
+  font-family:var(--font-display); font-size:36px; font-weight:700;
+  color:var(--primary); letter-spacing:3px;
+}
+.eta-box{
+  background:#E8F7EF; border:1px solid #A7E3C0; color:#1B6B3A;
+  padding:12px 14px; border-radius:12px; font-size:13.5px; margin:10px 0; font-weight:600;
+}
+body.dark-mode .eta-box{background:#0D2A1C; border-color:#2A9D63; color:#7DDEB0;}
+.my-ticket-card{
+  border:1.5px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px;
+  cursor:pointer; transition:.15s;
+}
+.my-ticket-card:hover{border-color:var(--primary); background:#F7FAFE;}
+body.dark-mode .my-ticket-card:hover{background:#152238;}
+
 </style>
 </head>
 <body>
@@ -400,12 +475,15 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
     <h1 id="clinicNameLabel">UZB</h1>
   </div>
   <div class="header-actions">
+    <button class="icon-btn" id="darkModeBtn" aria-label="Dark mode" title="Dark mode"><i class="fa-solid fa-moon"></i></button>
+    <button class="icon-btn" id="kioskBtn" aria-label="Kiosk" title="Kiosk mode"><i class="fa-solid fa-tv"></i></button>
+    <button class="icon-btn hidden" id="kioskExitBtn" aria-label="Exit kiosk"><i class="fa-solid fa-compress"></i></button>
     <button class="icon-btn" id="infoBtn" aria-label="Info"><i class="fa-solid fa-circle-info"></i></button>
     <div class="lang-menu">
       <button class="icon-btn" id="langBtn" aria-label="Language"><i class="fa-solid fa-globe"></i></button>
       <div class="lang-dropdown hidden" id="langDropdown">
-        <button data-lang="uz">O‘zbekcha (UZ)</button>
-        <button data-lang="ru">Русский (RU)</button>
+        <button data-lang="uz">OвЂzbekcha (UZ)</button>
+        <button data-lang="ru">Р СѓСЃСЃРєРёР№ (RU)</button>
         <button data-lang="en">English (EN)</button>
       </div>
     </div>
@@ -414,6 +492,10 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
 
 <!-- ============ PUBLIC BOARD ============ -->
 <main class="board-wrap">
+  <div class="tg-bar" id="tgBar">
+    <i class="fa-brands fa-telegram" style="color:#0088cc;font-size:20px;"></i>
+    <a href="https://t.me/sogliqnisaqlash_bot" target="_blank" rel="noopener" id="tgBotLink">@sogliqnisaqlash_bot</a>
+  </div>
   <div class="board-titlebar">
     <span id="boardTitle">Live queue board</span>
     <span id="clockLabel"></span>
@@ -456,6 +538,12 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
   <div class="modal">
     <div class="modal-head"><h2 id="bookingTitleStep1">Get a queue ticket</h2><button class="modal-close" data-close="bookingOverlay"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
+      <!-- Step 0: existing tickets for today -->
+      <div id="bookStep0" class="hidden">
+        <p id="myTicketsTitle" style="font-weight:700;margin:0 0 12px;"></p>
+        <div id="myTicketsList"></div>
+        <button class="btn btn-primary btn-block" id="bookNewTicketBtn" style="margin-top:12px;"><span id="btnNewTicket">Yangi navbat olish</span></button>
+      </div>
       <!-- Step 1: select doctor -->
       <div id="bookStep1">
         <div id="bookDoctorList"></div>
@@ -475,7 +563,16 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
           <div class="line" id="ticketPreviewLine">Your ticket number will be</div>
           <div class="big" id="ticketPreviewNum">#--</div>
         </div>
+        <div class="ticket-id-box" id="ticketIdPreviewBox" style="display:none;">
+          <div style="font-size:12px;color:var(--muted);font-weight:600;" id="ticketIdLabel">Navbat ID</div>
+          <div class="id-num" id="ticketPreviewId">-----</div>
+        </div>
+        <div class="eta-box" id="etaPreviewBox" style="display:none;"></div>
         <div class="confirm-box" id="inactiveWarningText" style="margin-top:16px;"></div>
+        <div style="font-size:13px;line-height:1.5;margin:12px 0;color:var(--muted);" id="tgBotHint"></div>
+        <div style="text-align:center;margin-bottom:8px;">
+          <a href="https://t.me/sogliqnisaqlash_bot" target="_blank" rel="noopener" style="color:#0088cc;font-weight:700;font-size:14px;" id="tgBotLinkBook">@sogliqnisaqlash_bot</a>
+        </div>
         <div class="btn-row">
           <button class="btn btn-danger btn-block" id="bookNo"><i class="fa-solid fa-xmark"></i> <span id="btnNo">No</span></button>
           <button class="btn btn-success btn-block" id="bookYes"><i class="fa-solid fa-check"></i> <span id="btnYes">Yes</span></button>
@@ -485,7 +582,30 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
       <div id="bookStep4" class="hidden" style="text-align:center;">
         <i class="fa-solid fa-circle-check" style="font-size:44px;color:var(--success);"></i>
         <p id="bookSuccessText" style="font-weight:700;font-size:16px;margin:14px 0 4px;"></p>
-        <button class="btn btn-primary" id="bookDone"><span id="btnDone">Done</span></button>
+        <div class="ticket-id-box" id="successIdBox">
+          <div style="font-size:12px;color:var(--muted);font-weight:600;" id="successIdLabel">Navbat ID</div>
+          <div class="id-num" id="successTicketId">-----</div>
+          <p style="font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.4;" id="successIdHint"></p>
+        </div>
+        <div style="margin:12px 0;font-size:13px;" id="successTgHint"></div>
+        <a href="https://t.me/sogliqnisaqlash_bot" target="_blank" rel="noopener" style="color:#0088cc;font-weight:700;">@sogliqnisaqlash_bot</a>
+        <div style="margin-top:16px;">
+          <button class="btn btn-primary" id="bookDone"><span id="btnDone">Done</span></button>
+        </div>
+      </div>
+      <!-- Ticket detail (click existing) -->
+      <div id="bookStepDetail" class="hidden" style="text-align:center;">
+        <div class="ticket-id-box">
+          <div style="font-size:12px;color:var(--muted);font-weight:600;" id="detailIdLabel">Navbat ID</div>
+          <div class="id-num" id="detailTicketId">-----</div>
+        </div>
+        <div id="detailInfo" style="text-align:left;margin:12px 0;font-size:14px;line-height:1.6;"></div>
+        <div class="eta-box" id="detailEta"></div>
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;" id="detailTgExplain"></p>
+        <a href="https://t.me/sogliqnisaqlash_bot" target="_blank" rel="noopener" style="color:#0088cc;font-weight:700;">@sogliqnisaqlash_bot</a>
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn btn-outline btn-block" id="detailBackBtn"><span id="btnDetailBack">Back</span></button>
+        </div>
       </div>
     </div>
   </div>
@@ -498,6 +618,7 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
     <div class="modal-body">
       <div class="tabs">
         <button class="tab-btn active" data-role="director" id="tabDirector">Director</button>
+        <button class="tab-btn" data-role="manager" id="tabManager">Manager</button>
         <button class="tab-btn" data-role="receptionist" id="tabReceptionist">Receptionist</button>
         <button class="tab-btn" data-role="doctor" id="tabDoctor">Doctor</button>
       </div>
@@ -524,12 +645,41 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
       <div class="stat-grid" id="statGrid"></div>
       <canvas id="trafficChart" height="90" style="margin-top:18px;"></canvas>
     </div>
-    <div class="card">
+    <div class="card hidden" id="dirDoctorsCard">
       <h3 style="display:flex;justify-content:space-between;align-items:center;">
         <span><i class="fa-solid fa-user-doctor"></i> <span id="doctorsTitle">Doctors</span></span>
         <button class="btn btn-primary btn-sm" id="addDoctorBtn"><i class="fa-solid fa-plus"></i> <span id="btnAddDoctor">Add doctor</span></button>
       </h3>
       <div id="doctorListDir"></div>
+    </div>
+    <div class="card">
+      <h3><i class="fa-solid fa-file-export"></i> <span id="exportTitle">Export reports</span></h3>
+      <div class="btn-row">
+        <button class="btn btn-outline btn-block" id="exportCsvBtn"><i class="fa-solid fa-file-csv"></i> <span id="btnExportCsv">Excel / CSV</span></button>
+        <button class="btn btn-outline btn-block" id="exportPdfBtn"><i class="fa-solid fa-file-pdf"></i> <span id="btnExportPdf">PDF</span></button>
+      </div>
+    </div>
+    <div class="card" id="dirPasswordsCard">
+      <h3><i class="fa-solid fa-key"></i> <span id="dirCredsTitle">Staff passwords</span></h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;" id="dirCredsHint">Update staff logins and passwords.</p>
+      <button class="btn btn-primary btn-block" id="dirOpenSettingsBtn"><span id="btnDirOpenSettings">Open credentials</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MANAGER DASHBOARD ============ -->
+<div class="dash-overlay hidden" id="managerDash">
+  <div class="dash-head">
+    <h2><i class="fa-solid fa-user-gear"></i> <span id="mgrDashTitle">Manager dashboard</span></h2>
+    <button class="icon-btn" id="mgrCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="dash-body">
+    <div class="card">
+      <h3 style="display:flex;justify-content:space-between;align-items:center;">
+        <span><i class="fa-solid fa-user-doctor"></i> <span id="mgrDoctorsTitle">Doctors</span></span>
+        <button class="btn btn-primary btn-sm" id="mgrAddDoctorBtn"><i class="fa-solid fa-plus"></i> <span id="btnMgrAddDoctor">Add doctor</span></button>
+      </h3>
+      <div id="doctorListMgr"></div>
     </div>
   </div>
 </div>
@@ -560,6 +710,7 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
         <div class="field"><label id="lblVacEnd">Vacation / absence end</label><input type="date" id="docVacEnd"></div>
       </div>
       <div class="field"><label id="lblLateDelay">Late arrival delay today (hours)</label><input type="number" id="docLateDelay" min="0" step="0.5" value="0"></div>
+      <div class="field"><label id="lblAvgConsult">Estimated consult time per patient (minutes)</label><input type="number" id="docAvgConsult" min="1" step="1" value="10"></div>
       <div class="btn-row">
         <button class="btn btn-outline btn-block" id="deleteDoctorBtn"><i class="fa-solid fa-trash"></i> <span id="btnDeleteDoctor">Delete</span></button>
         <button class="btn btn-primary btn-block" id="saveDoctorBtn"><span id="btnSaveDoctor">Save</span></button>
@@ -594,6 +745,11 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
         <div class="field"><label id="lblDocPass">Doctor portal password</label><input type="password" id="setDocPass"></div>
         <div class="field"><label id="lblDocPassConfirm">Confirm password</label><input type="password" id="setDocPassConfirm"></div>
       </div>
+      <div class="row-3">
+        <div class="field"><label id="lblMgrLogin">Manager login</label><input type="text" id="setMgrLogin"></div>
+        <div class="field"><label id="lblMgrPass">Manager password</label><input type="password" id="setMgrPass"></div>
+        <div class="field"><label id="lblMgrPassConfirm">Confirm password</label><input type="password" id="setMgrPassConfirm"></div>
+      </div>
       <button class="btn btn-primary btn-block" id="saveSettingsBtn" style="margin-top:6px;"><span id="btnSaveSettings">Save settings</span></button>
       <div class="error-msg hidden" id="settingsError"></div>
     </div>
@@ -625,6 +781,18 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
       <h3><i class="fa-solid fa-money-check-dollar"></i> <span id="pendingTitle">Pending online bookings</span></h3>
       <div id="pendingList"></div>
     </div>
+    <div class="card">
+      <h3><i class="fa-solid fa-pause-circle"></i> <span id="breakTitle">Doctor break / pause</span></h3>
+      <div class="field"><label id="lblBreakDoctor">Doctor</label><select id="breakDoctorSelect"></select></div>
+      <div class="row-2">
+        <div class="field"><label id="lblBreakStart">From</label><input type="time" id="breakStart"></div>
+        <div class="field"><label id="lblBreakEnd">Until</label><input type="time" id="breakEnd"></div>
+      </div>
+      <div class="field"><label id="lblBreakReason">Reason</label><input type="text" id="breakReason" placeholder="Lunch / emergency"></div>
+      <button class="btn btn-primary btn-block" id="setBreakBtn"><span id="btnSetBreak">Set break</span></button>
+      <button class="btn btn-outline btn-block" id="clearBreakBtn" style="margin-top:8px;"><span id="btnClearBreak">Clear break</span></button>
+      <div id="activeBreaksList" style="margin-top:14px;"></div>
+    </div>
   </div>
 </div>
 
@@ -638,6 +806,21 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
       <div class="field"><label id="lblRecNewPassConfirm">Confirm password</label><input type="password" id="recNewPassConfirm"></div>
       <button class="btn btn-primary btn-block" id="recProfileSave"><span id="btnRecProfileSave">Save</span></button>
       <div class="error-msg hidden" id="recProfileError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Doctor / shared break modal -->
+<div class="modal-overlay hidden" id="breakModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="breakModalTitle">Set break</h2><button class="modal-close" data-close="breakModalOverlay"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="row-2">
+        <div class="field"><label id="lblBmStart">From</label><input type="time" id="bmStart"></div>
+        <div class="field"><label id="lblBmEnd">Until</label><input type="time" id="bmEnd"></div>
+      </div>
+      <div class="field"><label id="lblBmReason">Reason</label><input type="text" id="bmReason"></div>
+      <button class="btn btn-primary btn-block" id="bmSaveBtn"><span id="btnBmSave">Save</span></button>
     </div>
   </div>
 </div>
@@ -673,7 +856,7 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
         <div class="consult-panel" id="consultPanel">
           <div class="line" style="color:var(--muted);font-size:13px;" id="currentLabel">Current patient</div>
           <div class="ticket-big" id="currentTicketNum">--</div>
-          <div class="pname" id="currentPatientName">—</div>
+          <div class="pname" id="currentPatientName">вЂ”</div>
           <div class="room-tag" id="currentRoomTag"></div>
         </div>
         <div class="btn-row" style="margin-top:20px;">
@@ -682,6 +865,9 @@ footer.app-foot{text-align:center; color:var(--muted); font-size:12px; padding:2
         <div class="btn-row">
           <button class="btn btn-success btn-block" id="patientDepartedBtn"><i class="fa-solid fa-check"></i> <span id="btnDeparted">Patient departed</span></button>
           <button class="btn btn-danger btn-block" id="patientNoShowBtn" disabled><i class="fa-solid fa-user-slash"></i> <span id="btnNoShow">Did not show up</span></button>
+        </div>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn btn-outline btn-block" id="docSetBreakBtn"><i class="fa-solid fa-pause"></i> <span id="btnDocBreak">Break / pause</span></button>
         </div>
       </div>
       <div class="card">
@@ -756,70 +942,140 @@ const I18N = {
     printClinic:"Clinic ticket", printDoctor:"Doctor", printPatient:"Patient", printRoom:"Room", printTicket:"Ticket #",
     footer:"Clinic Queue & Management System", noDoctors:"No doctors configured yet.",
     walkInBooked:"Ticket created", noPending:"No pending bookings.",
-    statusExpiredNote:"Expired — turn passed", loginRequiredAdmin:"Enter details to continue"
+    statusExpiredNote:"Expired вЂ” turn passed", loginRequiredAdmin:"Enter details to continue",
+    myTicketsTitle:"Your tickets today",
+    newTicket:"Get a new ticket",
+    etaTemplate:"{n} people ahead of you В· approx. {m} minutes",
+    etaNone:"You are next or currently being called",
+    bookingTooEarly:"Ticket booking for this doctor opens at {time} (1 hour before work starts).",
+    alreadyHasTicket:"You already have a ticket for this doctor today.",
+    onePerDay:"Only one ticket per doctor per day is allowed.",
+    ticketIdLabel:"Ticket ID",
+    successIdHint:"Save this ID. Send it to the Telegram bot to track your queue.",
+    tgBotHint:"Via our Telegram bot you don't have to worry about missing your turn.",
+    detailTgExplain:"Send this Ticket ID to the bot to see how many are ahead of you and get notified when you are close.",
+    roleManager:"Manager",
+    mgrDashTitle:"Manager dashboard",
+    exportTitle:"Export reports",
+    exportCsv:"Excel / CSV",
+    exportPdf:"PDF",
+    dirCredsTitle:"Staff passwords",
+    dirCredsHint:"Update staff logins and passwords.",
+    openCredentials:"Open credentials",
+    avgConsult:"Estimated consult time (minutes)",
+    breakTitle:"Doctor break / pause",
+    breakDoctor:"Doctor",
+    breakFrom:"From",
+    breakUntil:"Until",
+    breakReason:"Reason",
+    setBreak:"Set break",
+    clearBreak:"Clear break",
+    onBreakUntil:"Unavailable until {time}",
+    breakReasonLunch:"Break",
+    mgrLogin:"Manager login",
+    mgrPass:"Manager password",
+    ttsCalling:"Ticket {num}, {name}, please go to room {room}",
+    noTicketsYet:"You have no tickets today. Get a new one below.",
+    roomPadded:"Room"
+
   },
   ru:{
-    boardTitle:"Табло очереди", hTicket:"Талон", hDoctor:"Врач", hPatient:"Пациент", hRoom:"Кабинет", hStatus:"Статус",
-    fabLabel:"Получить талон", infoModalTitle:"О клинике",
-    bookingTitle:"Получить талон в очередь", firstName:"Имя", lastName:"Фамилия",
-    back:"Назад", next:"Далее", yes:"Да", no:"Нет",
-    ticketPreviewLine:"Вы получите талон", inactiveWarning:"Ваш талон пока НЕАКТИВЕН. Пожалуйста, оплатите на ресепшене по прибытии, чтобы активировать очередь. Подтвердить бронирование?",
-    bookSuccess:"Бронирование подтверждено! Оплатите на ресепшене, чтобы активировать талон.", done:"Готово",
-    loginTitle:"Вход для персонала", roleDirector:"Директор", roleReceptionist:"Ресепшн", roleDoctor:"Врач",
-    username:"Логин", password:"Пароль", login:"Войти", invalidCredentials:"Неверный логин или пароль.",
-    waiting:"Ожидание", calling:"Вызов", consult:"На приёме",
-    skipTemplate:"Талон №{skipped} неактивен. Талон №{next}, пожалуйста, пройдите в кабинет врача.",
-    dirDashTitle:"Панель директора", analyticsTitle:"Аналитика", doctorsTitle:"Врачи", addDoctor:"Добавить врача",
-    dailyThroughput:"Сегодня", monthlyThroughput:"За 30 дней", chartLabel:"Принято пациентов (30 дней)",
-    addDoctorTitle:"Добавить врача", editDoctorTitle:"Редактировать врача",
-    docFirst:"Имя", docLast:"Фамилия", specialty:"Специальность", roomNumber:"Номер кабинета",
-    startTime:"Начало работы", endTime:"Конец работы", workingDays:"Рабочие дни",
-    vacStart:"Начало отпуска/отсутствия", vacEnd:"Конец отпуска/отсутствия", lateDelay:"Задержка прихода сегодня (часы)",
-    save:"Сохранить", deleteDoctor:"Удалить", settingsTitle:"Настройки клиники", clinicName:"Название клиники",
-    clinicDesc:"Описание клиники", clinicPhoto:"Фото клиники", mapPickerLabel:"Расположение клиники (нажмите на карту)",
-    credsTitle:"Изменить учётные данные персонала", dirLogin:"Логин директора", dirPass:"Пароль директора", confirmPass:"Подтвердите пароль",
-    recLogin:"Логин ресепшн", recPass:"Пароль ресепшн", docLogin:"Логин врача", docPass:"Пароль врача",
-    saveSettings:"Сохранить настройки", passMismatch:"Пароли не совпадают.",
-    recDashTitle:"Панель ресепшн", walkInTitle:"Новый талон (живая очередь)", createWalkIn:"Создать и распечатать",
-    pendingTitle:"Ожидающие онлайн-брони", activate:"Активировать", print:"Печать",
-    recProfileTitle:"Обновить мои данные", expired:"Истёк",
-    doctorDashLabel:"Кабинет врача", whoAreYouTitle:"Кто вы?",
-    workingHoursEnded:"Рабочее время окончено", currentLabel:"Текущий / вызванный пациент",
-    callNext:"Вызвать следующего", departed:"Пациент вышел", noShow:"Пациент не явился",
-    myQueueTitle:"Очередь", noActivePatient:"Пациент ещё не вызван",
-    days:{mon:"Пн",tue:"Вт",wed:"Ср",thu:"Чт",fri:"Пт",sat:"Сб",sun:"Вс"},
-    ticketWord:"Талон", patientsWaiting:"в очереди", room:"Кабинет",
-    statTotalDoctors:"Активных врачей", statToday:"Принято сегодня", stat30:"Принято (30 дней)", statQueue:"Сейчас в очереди",
-    printClinic:"Талон клиники", printDoctor:"Врач", printPatient:"Пациент", printRoom:"Кабинет", printTicket:"Талон №",
-    footer:"Система управления очередью клиники", noDoctors:"Врачи ещё не добавлены.",
-    walkInBooked:"Талон создан", noPending:"Нет ожидающих броней.",
-    statusExpiredNote:"Истёк — очередь прошла", loginRequiredAdmin:"Введите данные для продолжения"
+    boardTitle:"РўР°Р±Р»Рѕ РѕС‡РµСЂРµРґРё", hTicket:"РўР°Р»РѕРЅ", hDoctor:"Р’СЂР°С‡", hPatient:"РџР°С†РёРµРЅС‚", hRoom:"РљР°Р±РёРЅРµС‚", hStatus:"РЎС‚Р°С‚СѓСЃ",
+    fabLabel:"РџРѕР»СѓС‡РёС‚СЊ С‚Р°Р»РѕРЅ", infoModalTitle:"Рћ РєР»РёРЅРёРєРµ",
+    bookingTitle:"РџРѕР»СѓС‡РёС‚СЊ С‚Р°Р»РѕРЅ РІ РѕС‡РµСЂРµРґСЊ", firstName:"РРјСЏ", lastName:"Р¤Р°РјРёР»РёСЏ",
+    back:"РќР°Р·Р°Рґ", next:"Р”Р°Р»РµРµ", yes:"Р”Р°", no:"РќРµС‚",
+    ticketPreviewLine:"Р’С‹ РїРѕР»СѓС‡РёС‚Рµ С‚Р°Р»РѕРЅ", inactiveWarning:"Р’Р°С€ С‚Р°Р»РѕРЅ РїРѕРєР° РќР•РђРљРўРР’Р•Рќ. РџРѕР¶Р°Р»СѓР№СЃС‚Р°, РѕРїР»Р°С‚РёС‚Рµ РЅР° СЂРµСЃРµРїС€РµРЅРµ РїРѕ РїСЂРёР±С‹С‚РёРё, С‡С‚РѕР±С‹ Р°РєС‚РёРІРёСЂРѕРІР°С‚СЊ РѕС‡РµСЂРµРґСЊ. РџРѕРґС‚РІРµСЂРґРёС‚СЊ Р±СЂРѕРЅРёСЂРѕРІР°РЅРёРµ?",
+    bookSuccess:"Р‘СЂРѕРЅРёСЂРѕРІР°РЅРёРµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРѕ! РћРїР»Р°С‚РёС‚Рµ РЅР° СЂРµСЃРµРїС€РµРЅРµ, С‡С‚РѕР±С‹ Р°РєС‚РёРІРёСЂРѕРІР°С‚СЊ С‚Р°Р»РѕРЅ.", done:"Р“РѕС‚РѕРІРѕ",
+    loginTitle:"Р’С…РѕРґ РґР»СЏ РїРµСЂСЃРѕРЅР°Р»Р°", roleDirector:"Р”РёСЂРµРєС‚РѕСЂ", roleReceptionist:"Р РµСЃРµРїС€РЅ", roleDoctor:"Р’СЂР°С‡",
+    username:"Р›РѕРіРёРЅ", password:"РџР°СЂРѕР»СЊ", login:"Р’РѕР№С‚Рё", invalidCredentials:"РќРµРІРµСЂРЅС‹Р№ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ.",
+    waiting:"РћР¶РёРґР°РЅРёРµ", calling:"Р’С‹Р·РѕРІ", consult:"РќР° РїСЂРёС‘РјРµ",
+    skipTemplate:"РўР°Р»РѕРЅ в„–{skipped} РЅРµР°РєС‚РёРІРµРЅ. РўР°Р»РѕРЅ в„–{next}, РїРѕР¶Р°Р»СѓР№СЃС‚Р°, РїСЂРѕР№РґРёС‚Рµ РІ РєР°Р±РёРЅРµС‚ РІСЂР°С‡Р°.",
+    dirDashTitle:"РџР°РЅРµР»СЊ РґРёСЂРµРєС‚РѕСЂР°", analyticsTitle:"РђРЅР°Р»РёС‚РёРєР°", doctorsTitle:"Р’СЂР°С‡Рё", addDoctor:"Р”РѕР±Р°РІРёС‚СЊ РІСЂР°С‡Р°",
+    dailyThroughput:"РЎРµРіРѕРґРЅСЏ", monthlyThroughput:"Р—Р° 30 РґРЅРµР№", chartLabel:"РџСЂРёРЅСЏС‚Рѕ РїР°С†РёРµРЅС‚РѕРІ (30 РґРЅРµР№)",
+    addDoctorTitle:"Р”РѕР±Р°РІРёС‚СЊ РІСЂР°С‡Р°", editDoctorTitle:"Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ РІСЂР°С‡Р°",
+    docFirst:"РРјСЏ", docLast:"Р¤Р°РјРёР»РёСЏ", specialty:"РЎРїРµС†РёР°Р»СЊРЅРѕСЃС‚СЊ", roomNumber:"РќРѕРјРµСЂ РєР°Р±РёРЅРµС‚Р°",
+    startTime:"РќР°С‡Р°Р»Рѕ СЂР°Р±РѕС‚С‹", endTime:"РљРѕРЅРµС† СЂР°Р±РѕС‚С‹", workingDays:"Р Р°Р±РѕС‡РёРµ РґРЅРё",
+    vacStart:"РќР°С‡Р°Р»Рѕ РѕС‚РїСѓСЃРєР°/РѕС‚СЃСѓС‚СЃС‚РІРёСЏ", vacEnd:"РљРѕРЅРµС† РѕС‚РїСѓСЃРєР°/РѕС‚СЃСѓС‚СЃС‚РІРёСЏ", lateDelay:"Р—Р°РґРµСЂР¶РєР° РїСЂРёС…РѕРґР° СЃРµРіРѕРґРЅСЏ (С‡Р°СЃС‹)",
+    save:"РЎРѕС…СЂР°РЅРёС‚СЊ", deleteDoctor:"РЈРґР°Р»РёС‚СЊ", settingsTitle:"РќР°СЃС‚СЂРѕР№РєРё РєР»РёРЅРёРєРё", clinicName:"РќР°Р·РІР°РЅРёРµ РєР»РёРЅРёРєРё",
+    clinicDesc:"РћРїРёСЃР°РЅРёРµ РєР»РёРЅРёРєРё", clinicPhoto:"Р¤РѕС‚Рѕ РєР»РёРЅРёРєРё", mapPickerLabel:"Р Р°СЃРїРѕР»РѕР¶РµРЅРёРµ РєР»РёРЅРёРєРё (РЅР°Р¶РјРёС‚Рµ РЅР° РєР°СЂС‚Сѓ)",
+    credsTitle:"РР·РјРµРЅРёС‚СЊ СѓС‡С‘С‚РЅС‹Рµ РґР°РЅРЅС‹Рµ РїРµСЂСЃРѕРЅР°Р»Р°", dirLogin:"Р›РѕРіРёРЅ РґРёСЂРµРєС‚РѕСЂР°", dirPass:"РџР°СЂРѕР»СЊ РґРёСЂРµРєС‚РѕСЂР°", confirmPass:"РџРѕРґС‚РІРµСЂРґРёС‚Рµ РїР°СЂРѕР»СЊ",
+    recLogin:"Р›РѕРіРёРЅ СЂРµСЃРµРїС€РЅ", recPass:"РџР°СЂРѕР»СЊ СЂРµСЃРµРїС€РЅ", docLogin:"Р›РѕРіРёРЅ РІСЂР°С‡Р°", docPass:"РџР°СЂРѕР»СЊ РІСЂР°С‡Р°",
+    saveSettings:"РЎРѕС…СЂР°РЅРёС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё", passMismatch:"РџР°СЂРѕР»Рё РЅРµ СЃРѕРІРїР°РґР°СЋС‚.",
+    recDashTitle:"РџР°РЅРµР»СЊ СЂРµСЃРµРїС€РЅ", walkInTitle:"РќРѕРІС‹Р№ С‚Р°Р»РѕРЅ (Р¶РёРІР°СЏ РѕС‡РµСЂРµРґСЊ)", createWalkIn:"РЎРѕР·РґР°С‚СЊ Рё СЂР°СЃРїРµС‡Р°С‚Р°С‚СЊ",
+    pendingTitle:"РћР¶РёРґР°СЋС‰РёРµ РѕРЅР»Р°Р№РЅ-Р±СЂРѕРЅРё", activate:"РђРєС‚РёРІРёСЂРѕРІР°С‚СЊ", print:"РџРµС‡Р°С‚СЊ",
+    recProfileTitle:"РћР±РЅРѕРІРёС‚СЊ РјРѕРё РґР°РЅРЅС‹Рµ", expired:"РСЃС‚С‘Рє",
+    doctorDashLabel:"РљР°Р±РёРЅРµС‚ РІСЂР°С‡Р°", whoAreYouTitle:"РљС‚Рѕ РІС‹?",
+    workingHoursEnded:"Р Р°Р±РѕС‡РµРµ РІСЂРµРјСЏ РѕРєРѕРЅС‡РµРЅРѕ", currentLabel:"РўРµРєСѓС‰РёР№ / РІС‹Р·РІР°РЅРЅС‹Р№ РїР°С†РёРµРЅС‚",
+    callNext:"Р’С‹Р·РІР°С‚СЊ СЃР»РµРґСѓСЋС‰РµРіРѕ", departed:"РџР°С†РёРµРЅС‚ РІС‹С€РµР»", noShow:"РџР°С†РёРµРЅС‚ РЅРµ СЏРІРёР»СЃСЏ",
+    myQueueTitle:"РћС‡РµСЂРµРґСЊ", noActivePatient:"РџР°С†РёРµРЅС‚ РµС‰С‘ РЅРµ РІС‹Р·РІР°РЅ",
+    days:{mon:"РџРЅ",tue:"Р’С‚",wed:"РЎСЂ",thu:"Р§С‚",fri:"РџС‚",sat:"РЎР±",sun:"Р’СЃ"},
+    ticketWord:"РўР°Р»РѕРЅ", patientsWaiting:"РІ РѕС‡РµСЂРµРґРё", room:"РљР°Р±РёРЅРµС‚",
+    statTotalDoctors:"РђРєС‚РёРІРЅС‹С… РІСЂР°С‡РµР№", statToday:"РџСЂРёРЅСЏС‚Рѕ СЃРµРіРѕРґРЅСЏ", stat30:"РџСЂРёРЅСЏС‚Рѕ (30 РґРЅРµР№)", statQueue:"РЎРµР№С‡Р°СЃ РІ РѕС‡РµСЂРµРґРё",
+    printClinic:"РўР°Р»РѕРЅ РєР»РёРЅРёРєРё", printDoctor:"Р’СЂР°С‡", printPatient:"РџР°С†РёРµРЅС‚", printRoom:"РљР°Р±РёРЅРµС‚", printTicket:"РўР°Р»РѕРЅ в„–",
+    footer:"РЎРёСЃС‚РµРјР° СѓРїСЂР°РІР»РµРЅРёСЏ РѕС‡РµСЂРµРґСЊСЋ РєР»РёРЅРёРєРё", noDoctors:"Р’СЂР°С‡Рё РµС‰С‘ РЅРµ РґРѕР±Р°РІР»РµРЅС‹.",
+    walkInBooked:"РўР°Р»РѕРЅ СЃРѕР·РґР°РЅ", noPending:"РќРµС‚ РѕР¶РёРґР°СЋС‰РёС… Р±СЂРѕРЅРµР№.",
+    statusExpiredNote:"РСЃС‚С‘Рє вЂ” РѕС‡РµСЂРµРґСЊ РїСЂРѕС€Р»Р°", loginRequiredAdmin:"Р’РІРµРґРёС‚Рµ РґР°РЅРЅС‹Рµ РґР»СЏ РїСЂРѕРґРѕР»Р¶РµРЅРёСЏ",
+    myTicketsTitle:"Р’Р°С€Рё С‚Р°Р»РѕРЅС‹ СЃРµРіРѕРґРЅСЏ",
+    newTicket:"Р’Р·СЏС‚СЊ РЅРѕРІС‹Р№ С‚Р°Р»РѕРЅ",
+    etaTemplate:"РџРµСЂРµРґ РІР°РјРё {n} С‡РµР». В· РїСЂРёРјРµСЂРЅРѕ {m} РјРёРЅ.",
+    etaNone:"Р’С‹ СЃР»РµРґСѓСЋС‰РёР№ РёР»Рё СѓР¶Рµ РІС‹Р·РІР°РЅС‹",
+    bookingTooEarly:"Р—Р°РїРёСЃСЊ Рє СЌС‚РѕРјСѓ РІСЂР°С‡Сѓ РѕС‚РєСЂРѕРµС‚СЃСЏ РІ {time} (Р·Р° 1 С‡Р°СЃ РґРѕ РЅР°С‡Р°Р»Р° СЂР°Р±РѕС‚С‹).",
+    alreadyHasTicket:"РЈ РІР°СЃ СѓР¶Рµ РµСЃС‚СЊ С‚Р°Р»РѕРЅ Рє СЌС‚РѕРјСѓ РІСЂР°С‡Сѓ РЅР° СЃРµРіРѕРґРЅСЏ.",
+    onePerDay:"РњРѕР¶РЅРѕ РІР·СЏС‚СЊ С‚РѕР»СЊРєРѕ РѕРґРёРЅ С‚Р°Р»РѕРЅ Рє РІСЂР°С‡Сѓ РІ РґРµРЅСЊ.",
+    ticketIdLabel:"ID С‚Р°Р»РѕРЅР°",
+    successIdHint:"РЎРѕС…СЂР°РЅРёС‚Рµ СЌС‚РѕС‚ ID. РћС‚РїСЂР°РІСЊС‚Рµ РµРіРѕ Telegram-Р±РѕС‚Сѓ, С‡С‚РѕР±С‹ РѕС‚СЃР»РµР¶РёРІР°С‚СЊ РѕС‡РµСЂРµРґСЊ.",
+    tgBotHint:"Р§РµСЂРµР· Telegram-Р±РѕС‚Р° РІС‹ РјРѕР¶РµС‚Рµ РЅРµ Р±РµСЃРїРѕРєРѕРёС‚СЊСЃСЏ Рѕ РїСЂРѕРїСѓСЃРєРµ РѕС‡РµСЂРµРґРё.",
+    detailTgExplain:"РћС‚РїСЂР°РІСЊС‚Рµ СЌС‚РѕС‚ ID Р±РѕС‚Сѓ, С‡С‚РѕР±С‹ СѓР·РЅР°С‚СЊ, СЃРєРѕР»СЊРєРѕ С‡РµР»РѕРІРµРє РїРµСЂРµРґ РІР°РјРё.",
+    roleManager:"РњРµРЅРµРґР¶РµСЂ",
+    mgrDashTitle:"РџР°РЅРµР»СЊ РјРµРЅРµРґР¶РµСЂР°",
+    exportTitle:"Р­РєСЃРїРѕСЂС‚ РѕС‚С‡С‘С‚РѕРІ",
+    exportCsv:"Excel / CSV",
+    exportPdf:"PDF",
+    dirCredsTitle:"РџР°СЂРѕР»Рё РїРµСЂСЃРѕРЅР°Р»Р°",
+    dirCredsHint:"РћР±РЅРѕРІРёС‚СЊ Р»РѕРіРёРЅС‹ Рё РїР°СЂРѕР»Рё СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ.",
+    openCredentials:"РћС‚РєСЂС‹С‚СЊ СѓС‡С‘С‚РЅС‹Рµ РґР°РЅРЅС‹Рµ",
+    avgConsult:"РЎСЂРµРґРЅРµРµ РІСЂРµРјСЏ РїСЂРёС‘РјР° (РјРёРЅ)",
+    breakTitle:"РџРµСЂРµСЂС‹РІ РІСЂР°С‡Р°",
+    breakDoctor:"Р’СЂР°С‡",
+    breakFrom:"РЎ",
+    breakUntil:"Р”Рѕ",
+    breakReason:"РџСЂРёС‡РёРЅР°",
+    setBreak:"РЈСЃС‚Р°РЅРѕРІРёС‚СЊ РїРµСЂРµСЂС‹РІ",
+    clearBreak:"РЎРЅСЏС‚СЊ РїРµСЂРµСЂС‹РІ",
+    onBreakUntil:"РќРµРґРѕСЃС‚СѓРїРµРЅ РґРѕ {time}",
+    breakReasonLunch:"РџРµСЂРµСЂС‹РІ",
+    mgrLogin:"Р›РѕРіРёРЅ РјРµРЅРµРґР¶РµСЂР°",
+    mgrPass:"РџР°СЂРѕР»СЊ РјРµРЅРµРґР¶РµСЂР°",
+    ttsCalling:"РўР°Р»РѕРЅ {num}, {name}, РїСЂРѕР№РґРёС‚Рµ РІ РєР°Р±РёРЅРµС‚ {room}",
+    noTicketsYet:"РЈ РІР°СЃ РЅРµС‚ С‚Р°Р»РѕРЅРѕРІ РЅР° СЃРµРіРѕРґРЅСЏ. Р’РѕР·СЊРјРёС‚Рµ РЅРѕРІС‹Р№ РЅРёР¶Рµ.",
+    roomPadded:"РљР°Р±РёРЅРµС‚"
+
   },
   uz:{
     boardTitle:"Navbat taxtasi", hTicket:"Talon", hDoctor:"Shifokor", hPatient:"Bemor", hRoom:"Xona", hStatus:"Holat",
     fabLabel:"Talon olish", infoModalTitle:"Klinika haqida",
     bookingTitle:"Navbat talonini olish", firstName:"Ism", lastName:"Familiya",
-    back:"Orqaga", next:"Keyingi", yes:"Ha", no:"Yo‘q",
-    ticketPreviewLine:"Sizga talon beriladi", inactiveWarning:"Sizning talonigiz hozircha FAOL EMAS. Navbatni faollashtirish uchun kelganingizda qabulxonada to‘lov qiling. Bronni tasdiqlaysizmi?",
-    bookSuccess:"Bron tasdiqlandi! Talonni faollashtirish uchun qabulxonada to‘lov qiling.", done:"Tayyor",
+    back:"Orqaga", next:"Keyingi", yes:"Ha", no:"YoвЂq",
+    ticketPreviewLine:"Sizga talon beriladi", inactiveWarning:"Sizning talonigiz hozircha FAOL EMAS. Navbatni faollashtirish uchun kelganingizda qabulxonada toвЂlov qiling. Bronni tasdiqlaysizmi?",
+    bookSuccess:"Bron tasdiqlandi! Talonni faollashtirish uchun qabulxonada toвЂlov qiling.", done:"Tayyor",
     loginTitle:"Xodimlar uchun kirish", roleDirector:"Direktor", roleReceptionist:"Qabulxona", roleDoctor:"Shifokor",
-    username:"Login", password:"Parol", login:"Kirish", invalidCredentials:"Login yoki parol noto‘g‘ri.",
+    username:"Login", password:"Parol", login:"Kirish", invalidCredentials:"Login yoki parol notoвЂgвЂri.",
     waiting:"Kutmoqda", calling:"Chaqirilmoqda", consult:"Qabulda",
-    skipTemplate:"Talon №{skipped} faol emas. Talon №{next}, iltimos shifokor xonasiga kiring.",
-    dirDashTitle:"Direktor paneli", analyticsTitle:"Statistika", doctorsTitle:"Shifokorlar", addDoctor:"Shifokor qo‘shish",
-    dailyThroughput:"Bugun", monthlyThroughput:"So‘nggi 30 kun", chartLabel:"Qabul qilingan bemorlar (30 kun)",
-    addDoctorTitle:"Shifokor qo‘shish", editDoctorTitle:"Shifokorni tahrirlash",
+    skipTemplate:"Talon в„–{skipped} faol emas. Talon в„–{next}, iltimos shifokor xonasiga kiring.",
+    dirDashTitle:"Direktor paneli", analyticsTitle:"Statistika", doctorsTitle:"Shifokorlar", addDoctor:"Shifokor qoвЂshish",
+    dailyThroughput:"Bugun", monthlyThroughput:"SoвЂnggi 30 kun", chartLabel:"Qabul qilingan bemorlar (30 kun)",
+    addDoctorTitle:"Shifokor qoвЂshish", editDoctorTitle:"Shifokorni tahrirlash",
     docFirst:"Ism", docLast:"Familiya", specialty:"Mutaxassislik", roomNumber:"Xona raqami",
     startTime:"Ish boshlanishi", endTime:"Ish tugashi", workingDays:"Ish kunlari",
     vacStart:"Ta'til/yo'qlik boshlanishi", vacEnd:"Ta'til/yo'qlik tugashi", lateDelay:"Bugungi kechikish (soat)",
-    save:"Saqlash", deleteDoctor:"O‘chirish", settingsTitle:"Klinika sozlamalari", clinicName:"Klinika nomi",
+    save:"Saqlash", deleteDoctor:"OвЂchirish", settingsTitle:"Klinika sozlamalari", clinicName:"Klinika nomi",
     clinicDesc:"Klinika tavsifi", clinicPhoto:"Klinika rasmi", mapPickerLabel:"Klinika manzili (xaritani bosing)",
-    credsTitle:"Xodimlar login/parolini o‘zgartirish", dirLogin:"Direktor logini", dirPass:"Direktor paroli", confirmPass:"Parolni tasdiqlang",
+    credsTitle:"Xodimlar login/parolini oвЂzgartirish", dirLogin:"Direktor logini", dirPass:"Direktor paroli", confirmPass:"Parolni tasdiqlang",
     recLogin:"Qabulxona logini", recPass:"Qabulxona paroli", docLogin:"Shifokor portali logini", docPass:"Shifokor portali paroli",
     saveSettings:"Sozlamalarni saqlash", passMismatch:"Parollar mos kelmadi.",
     recDashTitle:"Qabulxona paneli", walkInTitle:"Yangi talon (bevosita)", createWalkIn:"Yaratish va chop etish",
     pendingTitle:"Kutilayotgan onlayn bronlar", activate:"Faollashtirish", print:"Chop etish",
-    recProfileTitle:"Ma'lumotlarimni yangilash", expired:"Muddati o‘tgan",
+    recProfileTitle:"Ma'lumotlarimni yangilash", expired:"Muddati oвЂtgan",
     doctorDashLabel:"Shifokor kabineti", whoAreYouTitle:"Siz kimsiz?",
     workingHoursEnded:"Ish vaqti tugadi", currentLabel:"Joriy / chaqirilgan bemor",
     callNext:"Keyingisini chaqirish", departed:"Bemor chiqdi", noShow:"Bemor kelmadi",
@@ -827,10 +1083,45 @@ const I18N = {
     days:{mon:"Du",tue:"Se",wed:"Cho",thu:"Pa",fri:"Ju",sat:"Sh",sun:"Ya"},
     ticketWord:"Talon", patientsWaiting:"navbatda", room:"Xona",
     statTotalDoctors:"Faol shifokorlar", statToday:"Bugun qabul qilindi", stat30:"Qabul (30 kun)", statQueue:"Hozir navbatda",
-    printClinic:"Klinika taloni", printDoctor:"Shifokor", printPatient:"Bemor", printRoom:"Xona", printTicket:"Talon №",
-    footer:"Klinika navbat va boshqaruv tizimi", noDoctors:"Hali shifokorlar qo‘shilmagan.",
-    walkInBooked:"Talon yaratildi", noPending:"Kutilayotgan bronlar yo‘q.",
-    statusExpiredNote:"Muddati o‘tgan — navbat o‘tib ketdi", loginRequiredAdmin:"Davom etish uchun ma'lumot kiriting"
+    printClinic:"Klinika taloni", printDoctor:"Shifokor", printPatient:"Bemor", printRoom:"Xona", printTicket:"Talon в„–",
+    footer:"Klinika navbat va boshqaruv tizimi", noDoctors:"Hali shifokorlar qoвЂshilmagan.",
+    walkInBooked:"Talon yaratildi", noPending:"Kutilayotgan bronlar yoвЂq.",
+    statusExpiredNote:"Muddati o'tgan вЂ” navbat o'tib ketdi", loginRequiredAdmin:"Davom etish uchun ma'lumot kiriting",
+    myTicketsTitle:"Bugungi talonlaringiz",
+    newTicket:"Yangi navbat olish",
+    etaTemplate:"Sizdan oldin {n} kishi В· taxminan {m} daqiqa",
+    etaNone:"Siz keyingi yoki hozir chaqirilgansiz",
+    bookingTooEarly:"Bu shifokor uchun navbat olish {time} da ochiladi (ish boshlanishidan 1 soat oldin).",
+    alreadyHasTicket:"Bugun bu shifokorga allaqachon talon olgansiz.",
+    onePerDay:"Har bir shifokorga kuniga faqat 1 ta talon olish mumkin.",
+    ticketIdLabel:"Navbat ID",
+    successIdHint:"Bu ID ni saqlang. Navbatni kuzatish uchun Telegram botga yuboring.",
+    tgBotHint:"Telegram botimiz orqali navbatingiz o'tib ketishidan xavotir olmasangiz ham bo'ladi.",
+    detailTgExplain:"Bu Navbat ID ni botga tashlasangiz, oldingizda nechta navbat qolganini ko'rasiz.",
+    roleManager:"Menejer",
+    mgrDashTitle:"Menejer paneli",
+    exportTitle:"Hisobot eksporti",
+    exportCsv:"Excel / CSV",
+    exportPdf:"PDF",
+    dirCredsTitle:"Xodimlar parollari",
+    dirCredsHint:"Xodimlar login va parollarini yangilash.",
+    openCredentials:"Hisob ma'lumotlarini ochish",
+    avgConsult:"Taxminiy qabul vaqti (daqiqa)",
+    breakTitle:"Shifokor tanaffusi",
+    breakDoctor:"Shifokor",
+    breakFrom:"Dan",
+    breakUntil:"Gacha",
+    breakReason:"Sabab",
+    setBreak:"Tanaffus belgilash",
+    clearBreak:"Tanaffusni bekor qilish",
+    onBreakUntil:"{time} gacha mavjud emas",
+    breakReasonLunch:"Tanaffus",
+    mgrLogin:"Menejer logini",
+    mgrPass:"Menejer paroli",
+    ttsCalling:"Talon {num}, {name}, {room}-xonaga kiring",
+    noTicketsYet:"Bugun talonlaringiz yo'q. Pastdan yangi oling.",
+    roomPadded:"Xona"
+
   }
 };
 let currentLang = localStorage.getItem("clinic_lang") || "en";
@@ -886,7 +1177,7 @@ function firebaseErrorMessage(err){
   console.error("Firebase error:", err);
   const code = (err && err.code) || "";
   if(code.includes("PERMISSION_DENIED") || code.includes("permission-denied")){
-    return "Firebase: yozishga ruxsat yo'q (PERMISSION_DENIED). Realtime Database qoidalarini (Rules) tekshiring — .write true bo'lishi kerak, chunki bu ilovada Firebase Auth ishlatilmagan.";
+    return "Firebase: yozishga ruxsat yo'q (PERMISSION_DENIED). Realtime Database qoidalarini (Rules) tekshiring вЂ” .write true bo'lishi kerak, chunki bu ilovada Firebase Auth ishlatilmagan.";
   }
   return "Firebase xatosi: " + (err && err.message ? err.message : String(err));
 }
@@ -936,6 +1227,79 @@ function withinWorkingHours(doc){
   return now >= start && now <= end;
 }
 
+function makeTicketId(room, number){
+  const r = String(room||0).replace(/\D/g,"");
+  const roomPart = (r.slice(-2) || "0").padStart(2,"0");
+  const numPart = String(number||0).padStart(3,"0").slice(-3);
+  return roomPart + numPart;
+}
+function avgMinutes(doc){
+  const n = parseFloat(doc && doc.avgConsultMinutes);
+  return (n && n>0) ? n : 10;
+}
+function countAhead(doctorId, ticketNumber){
+  const dts = ticketsForDoctor(doctorId);
+  return dts.filter(tk =>
+    (tk.status==="active"||tk.status==="calling"||tk.status==="in_consultation") &&
+    (tk.number < ticketNumber)
+  ).length;
+}
+function etaText(doctorId, ticketNumber){
+  const ahead = countAhead(doctorId, ticketNumber);
+  if(ahead<=0) return t("etaNone");
+  const mins = Math.round(ahead * avgMinutes(DOCTORS[doctorId]||{}));
+  return t("etaTemplate").replace("{n}", ahead).replace("{m}", mins);
+}
+function isDoctorOnBreak(doc){
+  if(!doc || !doc.breakUntil || doc.breakDate !== todayStr()) return false;
+  const now = nowHM();
+  const start = doc.breakStart || "00:00";
+  const end = doc.breakUntil;
+  return now >= start && now <= end;
+}
+function bookingWindowOpen(doc){
+  if(!doc) return false;
+  if(!doctorWorksToday(doc)) return false;
+  // open 1 hour before startTime
+  const start = doc.startTime || "09:00";
+  const [h,m] = start.split(":").map(Number);
+  let total = h*60 + m - 60;
+  if(total < 0) total = 0;
+  const openAt = pad(Math.floor(total/60))+":"+pad(total%60);
+  const now = nowHM();
+  const end = doc.endTime || "23:59";
+  return now >= openAt && now <= end;
+}
+function bookingOpensAt(doc){
+  const start = (doc && doc.startTime) || "09:00";
+  const [h,m] = start.split(":").map(Number);
+  let total = h*60 + m - 60;
+  if(total < 0) total = 0;
+  return pad(Math.floor(total/60))+":"+pad(total%60);
+}
+function speakAnnouncement(text){
+  try{
+    if(!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = currentLang==="ru" ? "ru-RU" : (currentLang==="uz" ? "uz-UZ" : "en-US");
+    u.rate = 0.95;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+function localTicketsKey(){
+  return "clinic_my_tickets_"+todayStr();
+}
+function getLocalTicketRefs(){
+  try{ return JSON.parse(localStorage.getItem(localTicketsKey())||"[]"); }catch(e){ return []; }
+}
+function addLocalTicketRef(ref){
+  const arr = getLocalTicketRefs();
+  arr.push(ref);
+  localStorage.setItem(localTicketsKey(), JSON.stringify(arr));
+}
+
+
 function ticketsForDoctor(doctorId){
   return Object.entries(TICKETS)
     .filter(([id,tk])=>tk.doctorId===doctorId && tk.date===todayStr())
@@ -977,7 +1341,7 @@ onSnapshot(collection(db,"tickets"), (snap)=>{
 function applyConfigToUI(){
   const name = CONFIG.clinicName || "UZB";
   $("clinicNameLabel").textContent = name;
-  document.title = name + " — Queue";
+  document.title = name + " вЂ” Queue";
   $("infoDescText").textContent = CONFIG.clinicDescription || "";
   if(CONFIG.clinicPhoto){
     $("infoPhoto").src = CONFIG.clinicPhoto; $("infoPhoto").style.display="block";
@@ -1125,20 +1489,35 @@ function renderBoard(){
 
   boardBody.innerHTML = "";
   rows.forEach((r,idx)=>{
+    const onBreak = isDoctorOnBreak(r.doc);
     const div = document.createElement("div");
-    div.className = "board-row" + (idx===0 && r.shown ? " priority" : "");
-    const numText = r.shown ? "#"+r.shown.number : "—";
+    div.className = "board-row" + (idx===0 && r.shown && !onBreak ? " priority" : "") + (onBreak ? " on-break" : "");
+    const numText = r.shown ? "#"+r.shown.number : "вЂ”";
     const patientName = r.shown ? (r.shown.patientFirst+" "+r.shown.patientLast) : "";
     const status = r.shown ? r.shown.status : "";
+    let breakHtml = "";
+    if(onBreak){
+      breakHtml = `<div class="break-note"><i class="fa-solid fa-pause"></i> ${t("onBreakUntil").replace("{time}", r.doc.breakUntil||"")} ${r.doc.breakReason ? "В· "+r.doc.breakReason : ""}</div>`;
+    }
     div.innerHTML = `
       <div class="num split-flap"><span>${numText}</span></div>
-      <div><div class="doc-name">${r.doc.firstName||""} ${r.doc.lastName||""}</div><div class="doc-spec">${r.doc.specialty||""} · ${r.waitingCount} ${t("patientsWaiting")}</div></div>
+      <div><div class="doc-name">${r.doc.firstName||""} ${r.doc.lastName||""}</div><div class="doc-spec">${r.doc.specialty||""} В· ${r.waitingCount} ${t("patientsWaiting")}</div>${breakHtml}</div>
       <div class="patient">${patientName}</div>
       <div class="room">${r.doc.room ? (t("room")+" "+r.doc.room) : ""}</div>
-      <div>${r.shown ? statusBadge(status) : `<span class="badge waiting">${t("waiting")}</span>`}</div>
+      <div>${onBreak ? `<span class="badge waiting">${t("breakReasonLunch")}</span>` : (r.shown ? statusBadge(status) : `<span class="badge waiting">${t("waiting")}</span>`)}</div>
     `;
     boardBody.appendChild(div);
   });
+  // TTS on new priority
+  if(isNewPriority && rows[0] && rows[0].shown){
+    const sh = rows[0].shown;
+    const d = rows[0].doc;
+    const phrase = t("ttsCalling")
+      .replace("{num}", sh.number)
+      .replace("{name}", (sh.patientFirst||"")+" "+(sh.patientLast||""))
+      .replace("{room}", d.room||"");
+    speakAnnouncement(phrase);
+  }
 }
 
 // Skip banner: show transient banner when a doctor's skipInfo changes
@@ -1225,6 +1604,9 @@ $("loginSubmit").addEventListener("click", async ()=>{
   if(currentRole==="director"){
     ok = (u===(cfg.directorLogin||"aaa") && p===(cfg.directorPass||"111"));
     if(ok){ hide("loginOverlay"); openDirectorDash(); }
+  } else if(currentRole==="manager"){
+    ok = (u===(cfg.managerLogin||"mgr") && p===(cfg.managerPass||"444"));
+    if(ok){ hide("loginOverlay"); openManagerDash(); }
   } else if(currentRole==="receptionist"){
     ok = (u===(cfg.receptionistLogin||"bbb") && p===(cfg.receptionistPass||"222"));
     if(ok){ hide("loginOverlay"); openReceptionDash(); }
@@ -1237,30 +1619,118 @@ $("loginSubmit").addEventListener("click", async ()=>{
     show("loginError");
   }
 });
+function openManagerDash(){
+  show("managerDash");
+  renderManagerDoctorList();
+}
+function renderManagerDoctorList(){
+  const wrap = $("doctorListMgr");
+  if(!wrap) return;
+  wrap.innerHTML = "";
+  Object.entries(DOCTORS||{}).forEach(([id,doc])=>{
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.innerHTML = `<div><div style="font-weight:700;">${doc.firstName} ${doc.lastName}</div>
+      <div class="meta">${doc.specialty||""} В· ${doc.startTime||"--"}вЂ“${doc.endTime||"--"} В· avg ${avgMinutes(doc)} min</div></div>
+      <button class="btn btn-outline btn-sm" data-id="${id}"><i class="fa-solid fa-pen"></i></button>`;
+    div.querySelector("button").addEventListener("click", ()=> openDoctorEdit(id));
+    wrap.appendChild(div);
+  });
+}
+if($("mgrCloseBtn")) $("mgrCloseBtn").addEventListener("click", ()=> hide("managerDash"));
+if($("mgrAddDoctorBtn")) $("mgrAddDoctorBtn").addEventListener("click", ()=> openDoctorEdit(null));
+
 
 /* =========================================================
    BOOKING FLOW (Public)
    ========================================================= */
 const bookingOverlay=$("bookingOverlay"), bookStep1=$("bookStep1"), bookStep2=$("bookStep2"), bookStep3=$("bookStep3"), bookStep4=$("bookStep4");
+// bookStep0 / bookStepDetail defined in openBooking patch
 
 function openBookingModal(){
   selectedBookingDoctor = null;
   show("bookingOverlay");
-  goBookStep(1);
-  renderBookingDoctorList();
+  // Show existing local tickets first if any
+  const refs = getLocalTicketRefs();
+  const mine = refs.map(r => {
+    const found = Object.entries(TICKETS||{}).find(([id,tk]) => id===r.id || (tk.ticketId===r.ticketId && tk.date===todayStr()));
+    return found ? {id:found[0], ...found[1]} : null;
+  }).filter(Boolean);
+  // also match by name stored
+  if(mine.length){
+    goBookStep(0);
+    renderMyTickets(mine);
+  } else {
+    goBookStep(1);
+    renderBookingDoctorList();
+  }
 }
 function goBookStep(n){
-  [bookStep1,bookStep2,bookStep3,bookStep4].forEach((el,i)=> el.classList.toggle("hidden", i!==(n-1)));
+  const steps = [bookStep0, bookStep1, bookStep2, bookStep3, bookStep4, bookStepDetail].filter(Boolean);
+  // map: 0->bookStep0, 1->1, 2->2, 3->3, 4->4, 5->detail
+  const map = {0:bookStep0,1:bookStep1,2:bookStep2,3:bookStep3,4:bookStep4,5:bookStepDetail};
+  Object.values(map).forEach(el => { if(el) el.classList.add("hidden"); });
+  if(map[n]) map[n].classList.remove("hidden");
 }
+const bookStep0 = $("bookStep0");
+const bookStepDetail = $("bookStepDetail");
+function renderMyTickets(list){
+  $("myTicketsTitle").textContent = t("myTicketsTitle");
+  $("btnNewTicket").textContent = t("newTicket");
+  const wrap = $("myTicketsList");
+  wrap.innerHTML = "";
+  if(!list.length){
+    wrap.innerHTML = `<p style="color:var(--muted);font-size:13px;">${t("noTicketsYet")}</p>`;
+    return;
+  }
+  list.forEach(tk=>{
+    const doc = DOCTORS[tk.doctorId]||{};
+    const div = document.createElement("div");
+    div.className = "my-ticket-card";
+    div.innerHTML = `<div style="font-weight:700;">#${tk.number} вЂ” ${tk.patientFirst} ${tk.patientLast}</div>
+      <div style="font-size:12.5px;color:var(--muted);">${doc.firstName||""} ${doc.lastName||""} В· ${doc.specialty||""}</div>
+      <div style="font-size:12px;margin-top:4px;">${etaText(tk.doctorId, tk.number)}</div>`;
+    div.addEventListener("click", ()=> showTicketDetail(tk));
+    wrap.appendChild(div);
+  });
+}
+function showTicketDetail(tk){
+  const doc = DOCTORS[tk.doctorId]||{};
+  $("detailTicketId").textContent = tk.ticketId || makeTicketId(doc.room, tk.number);
+  $("detailIdLabel").textContent = t("ticketIdLabel");
+  $("detailInfo").innerHTML = `<div><b>#${tk.number}</b> вЂ” ${tk.patientFirst} ${tk.patientLast}</div>
+    <div>${doc.firstName||""} ${doc.lastName||""} В· ${doc.specialty||""}</div>
+    <div>${t("room")} ${doc.room||"вЂ”"}</div>`;
+  $("detailEta").textContent = etaText(tk.doctorId, tk.number);
+  $("detailTgExplain").textContent = t("detailTgExplain");
+  $("btnDetailBack").textContent = t("back");
+  goBookStep(5);
+}
+if($("detailBackBtn")) $("detailBackBtn").addEventListener("click", ()=> openBookingModal());
+if($("bookNewTicketBtn")) $("bookNewTicketBtn").addEventListener("click", ()=>{
+  goBookStep(1);
+  renderBookingDoctorList();
+});
+
 function renderBookingDoctorList(){
   const wrap = $("bookDoctorList");
   wrap.innerHTML = "";
   Object.entries(DOCTORS||{}).forEach(([id,doc])=>{
     const dts = ticketsForDoctor(id).filter(tk=>tk.status==="active"||tk.status==="pending_payment"||tk.status==="in_consultation"||tk.status==="calling");
+    const onBreak = isDoctorOnBreak(doc);
+    const windowOpen = bookingWindowOpen(doc);
     const div = document.createElement("div");
     div.className = "doctor-pick" + (selectedBookingDoctor===id ? " selected":"");
-    div.innerHTML = `<div><div class="dname">${doc.firstName} ${doc.lastName}</div><div class="dspec">${doc.specialty||""}</div></div><div class="dcount">${dts.length} ${t("patientsWaiting")}</div>`;
+    if(onBreak) div.style.opacity = "0.6";
+    let extra = "";
+    if(onBreak) extra = `<div style="font-size:11px;color:#E63946;">${t("onBreakUntil").replace("{time}", doc.breakUntil||"")}</div>`;
+    else if(!windowOpen) extra = `<div style="font-size:11px;color:#8A5A00;">${t("bookingTooEarly").replace("{time}", bookingOpensAt(doc))}</div>`;
+    const waitMin = Math.round(dts.length * avgMinutes(doc));
+    div.innerHTML = `<div><div class="dname">${doc.firstName} ${doc.lastName}</div><div class="dspec">${doc.specialty||""}</div>${extra}</div>
+      <div class="dcount">${dts.length} ${t("patientsWaiting")}${dts.length?`<div style="font-size:10px;font-weight:600;">~${waitMin} min</div>`:""}</div>`;
     div.addEventListener("click", ()=>{
+      if(onBreak){ showToast(t("onBreakUntil").replace("{time}", doc.breakUntil||"")); return; }
+      if(!windowOpen){ showToast(t("bookingTooEarly").replace("{time}", bookingOpensAt(doc))); return; }
       selectedBookingDoctor = id;
       renderBookingDoctorList();
       goBookStep(2);
@@ -1272,9 +1742,34 @@ $("bookBack1").addEventListener("click", ()=> goBookStep(1));
 $("bookNext1").addEventListener("click", ()=>{
   const first = $("bookFirst").value.trim(), last=$("bookLast").value.trim();
   if(!first || !last){ return; }
+  // one ticket per doctor per day (same name)
+  const existing = ticketsForDoctor(selectedBookingDoctor).find(tk =>
+    (tk.patientFirst||"").toLowerCase()===first.toLowerCase() &&
+    (tk.patientLast||"").toLowerCase()===last.toLowerCase() &&
+    ["pending_payment","active","calling","in_consultation"].includes(tk.status)
+  );
+  if(existing){
+    showToast(t("alreadyHasTicket"));
+    showTicketDetail(existing);
+    return;
+  }
+  const doc = DOCTORS[selectedBookingDoctor]||{};
+  if(!bookingWindowOpen(doc)){
+    showToast(t("bookingTooEarly").replace("{time}", bookingOpensAt(doc)));
+    return;
+  }
   const nextNum = getNextTicketNumber(selectedBookingDoctor);
   $("ticketPreviewNum").textContent = "#"+nextNum;
+  const tid = makeTicketId(doc.room, nextNum);
+  $("ticketPreviewId").textContent = tid;
+  $("ticketIdPreviewBox").style.display = "block";
+  $("ticketIdLabel").textContent = t("ticketIdLabel");
+  const ahead = ticketsForDoctor(selectedBookingDoctor).filter(tk=>["active","calling","in_consultation"].includes(tk.status)).length;
+  const mins = Math.round(ahead * avgMinutes(doc));
+  $("etaPreviewBox").style.display = "block";
+  $("etaPreviewBox").textContent = ahead===0 ? t("etaNone") : t("etaTemplate").replace("{n}", ahead).replace("{m}", mins);
   $("inactiveWarningText").textContent = t("inactiveWarning");
+  $("tgBotHint").textContent = t("tgBotHint");
   goBookStep(3);
 });
 function getNextTicketNumber(doctorId){
@@ -1286,14 +1781,22 @@ $("bookNo").addEventListener("click", ()=> hide("bookingOverlay"));
 $("bookYes").addEventListener("click", async ()=>{
   const first = $("bookFirst").value.trim(), last=$("bookLast").value.trim();
   const number = getNextTicketNumber(selectedBookingDoctor);
+  const docObj = DOCTORS[selectedBookingDoctor]||{};
+  const ticketId = makeTicketId(docObj.room, number);
   try{
-    await addDoc(collection(db,"tickets"), {
+    const ref = await addDoc(collection(db,"tickets"), {
       doctorId: selectedBookingDoctor,
       number, patientFirst:first, patientLast:last,
       status:"pending_payment", source:"online",
-      date: todayStr(), createdAt: Date.now()
+      date: todayStr(), createdAt: Date.now(),
+      ticketId
     });
+    addLocalTicketRef({id: ref.id, ticketId, doctorId: selectedBookingDoctor, number});
     $("bookSuccessText").textContent = t("bookSuccess");
+    $("successTicketId").textContent = ticketId;
+    $("successIdLabel").textContent = t("ticketIdLabel");
+    $("successIdHint").textContent = t("successIdHint");
+    $("successTgHint").textContent = t("tgBotHint");
     goBookStep(4);
   }catch(err){
     showToast(firebaseErrorMessage(err));
@@ -1368,9 +1871,12 @@ async function markPatientNoShow(doctorId){
 const directorDash = $("directorDash");
 function openDirectorDash(){
   show("directorDash");
-  renderDirectorDoctorList();
+  // Director: stats + passwords only вЂ” hide doctor management
+  if($("dirDoctorsCard")) $("dirDoctorsCard").classList.add("hidden");
   renderAnalytics();
 }
+if($("dirOpenSettingsBtn")) $("dirOpenSettingsBtn").addEventListener("click", ()=> openSettingsModal());
+
 $("dirCloseBtn").addEventListener("click", ()=> hide("directorDash"));
 $("dirSettingsBtn").addEventListener("click", ()=> openSettingsModal());
 
@@ -1381,7 +1887,7 @@ function renderDirectorDoctorList(){
     const div = document.createElement("div");
     div.className = "list-item";
     div.innerHTML = `<div><div style="font-weight:700;">${doc.firstName} ${doc.lastName}</div>
-      <div class="meta">${doc.specialty||""} · ${doc.startTime||"--"}–${doc.endTime||"--"} · ${(doc.workDays||[]).map(d=>t("days")[d]).join(", ")}</div></div>
+      <div class="meta">${doc.specialty||""} В· ${doc.startTime||"--"}вЂ“${doc.endTime||"--"} В· ${(doc.workDays||[]).map(d=>t("days")[d]).join(", ")}</div></div>
       <button class="btn btn-outline btn-sm" data-id="${id}"><i class="fa-solid fa-pen"></i></button>`;
     div.querySelector("button").addEventListener("click", ()=> openDoctorEdit(id));
     wrap.appendChild(div);
@@ -1432,6 +1938,7 @@ function openDoctorEdit(id){
   $("docVacStart").value = doc.vacStart||"";
   $("docVacEnd").value = doc.vacEnd||"";
   $("docLateDelay").value = doc.lateDelayDate===todayStr() ? (doc.lateDelayHours||0) : 0;
+  if($("docAvgConsult")) $("docAvgConsult").value = doc.avgConsultMinutes || 10;
   renderWorkDaysPicker(doc.workDays || ["mon","tue","wed","thu","fri"]);
   $("deleteDoctorBtn").classList.toggle("hidden", !id);
   show("doctorEditOverlay");
@@ -1466,7 +1973,8 @@ $("saveDoctorBtn").addEventListener("click", async ()=>{
     vacStart: $("docVacStart").value || null,
     vacEnd: $("docVacEnd").value || null,
     lateDelayHours: parseFloat($("docLateDelay").value)||0,
-    lateDelayDate: parseFloat($("docLateDelay").value) ? todayStr() : null
+    lateDelayDate: parseFloat($("docLateDelay").value) ? todayStr() : null,
+    avgConsultMinutes: parseFloat($("docAvgConsult") && $("docAvgConsult").value) || 10
   };
   try{
     if(editingDoctorId){
@@ -1475,7 +1983,7 @@ $("saveDoctorBtn").addEventListener("click", async ()=>{
       await addDoc(collection(db,"doctors"), payload);
     }
     hide("doctorEditOverlay");
-    showToast(t("save")+" ✓", false);
+    showToast(t("save")+" ?", false);
   }catch(err){
     showToast(firebaseErrorMessage(err));
   }
@@ -1498,9 +2006,11 @@ function openSettingsModal(){
   $("setDirLogin").value = CONFIG.directorLogin || "aaa";
   $("setRecLogin").value = CONFIG.receptionistLogin || "bbb";
   $("setDocLogin").value = CONFIG.doctorLogin || "ccc";
+  if($("setMgrLogin")) $("setMgrLogin").value = CONFIG.managerLogin || "mgr";
   $("setDirPass").value=""; $("setDirPassConfirm").value="";
   $("setRecPass").value=""; $("setRecPassConfirm").value="";
   $("setDocPass").value=""; $("setDocPassConfirm").value="";
+  if($("setMgrPass")){ $("setMgrPass").value=""; $("setMgrPassConfirm").value=""; }
   hide("settingsError");
   pickedLocation = CONFIG.location || {lat:41.311, lng:69.279};
   show("settingsOverlay");
@@ -1545,6 +2055,13 @@ $("saveSettingsBtn").addEventListener("click", async ()=>{
     updates.doctorPass = $("setDocPass").value;
   }
   updates.doctorLogin = $("setDocLogin").value.trim() || "ccc";
+  if($("setMgrLogin")){
+    updates.managerLogin = $("setMgrLogin").value.trim() || "mgr";
+    if($("setMgrPass") && $("setMgrPass").value){
+      if($("setMgrPass").value !== $("setMgrPassConfirm").value){ $("settingsError").textContent=t("passMismatch"); show("settingsError"); return; }
+      updates.managerPass = $("setMgrPass").value;
+    }
+  }
 
   try{
     const file = $("setClinicPhoto").files[0];
@@ -1556,7 +2073,7 @@ $("saveSettingsBtn").addEventListener("click", async ()=>{
     }
     await setDoc(doc(db,"config","main"), updates, {merge:true});
     hide("settingsOverlay");
-    showToast(t("saveSettings")+" ✓", false);
+    showToast(t("saveSettings")+" ?", false);
   }catch(err){
     $("settingsError").textContent = firebaseErrorMessage(err);
     show("settingsError");
@@ -1616,9 +2133,11 @@ $("createWalkInBtn").addEventListener("click", async ()=>{
   const first = $("wiFirst").value.trim(), last = $("wiLast").value.trim();
   if(!walkInSelectedDoctor || !first || !last) return;
   const number = getNextTicketNumber(walkInSelectedDoctor);
+  const dobj = DOCTORS[walkInSelectedDoctor]||{};
   const ticketData = {
     doctorId: walkInSelectedDoctor, number, patientFirst:first, patientLast:last,
-    status:"active", source:"walkin", date:todayStr(), createdAt:Date.now(), activatedAt:Date.now()
+    status:"active", source:"walkin", date:todayStr(), createdAt:Date.now(), activatedAt:Date.now(),
+    ticketId: makeTicketId(dobj.room, number)
   };
   try{
     await addDoc(collection(db,"tickets"), ticketData);
@@ -1641,13 +2160,13 @@ function renderPendingList(){
     const doctorObj = DOCTORS[tk.doctorId]||{};
     const div = document.createElement("div");
     div.className = "list-item";
-    div.innerHTML = `<div><div style="font-weight:700;">#${tk.number} — ${tk.patientFirst} ${tk.patientLast}</div>
-      <div class="meta">${doctorObj.firstName||""} ${doctorObj.lastName||""} · ${doctorObj.specialty||""}</div></div>
+    div.innerHTML = `<div><div style="font-weight:700;">#${tk.number} вЂ” ${tk.patientFirst} ${tk.patientLast}</div>
+      <div class="meta">${doctorObj.firstName||""} ${doctorObj.lastName||""} В· ${doctorObj.specialty||""}</div></div>
       <button class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i> ${t("activate")}</button>`;
     div.querySelector("button").addEventListener("click", async ()=>{
       try{
-        await updateDoc(doc(db,"tickets",id), {status:"active", activatedAt:Date.now()});
-        printTicket({...tk, doctor:doctorObj});
+        await updateDoc(doc(db,"tickets",id), {status:"active", activatedAt:Date.now(), ticketId: (tk.ticketId||makeTicketId(doctorObj.room, tk.number))});
+        printTicket({...tk, ticketId: (tk.ticketId||makeTicketId(doctorObj.room, tk.number)), doctor:doctorObj});
       }catch(err){
         showToast(firebaseErrorMessage(err));
       }
@@ -1665,6 +2184,7 @@ function printTicket(ticketData){
       <hr>
       <div style="font-size:11px;color:#555;">${t("printTicket")}</div>
       <div style="font-size:40px;font-weight:700;">#${ticketData.number}</div>
+      <div style="font-size:18px;font-weight:700;letter-spacing:2px;margin:6px 0;">ID ${ticketData.ticketId||makeTicketId(doc.room,ticketData.number)}</div>
       <hr>
       <div style="font-size:12px;text-align:left;">
         <div>${t("printDoctor")}: ${doc.firstName||""} ${doc.lastName||""}</div>
@@ -1672,6 +2192,7 @@ function printTicket(ticketData){
         <div>${t("printRoom")}: ${doc.room||"-"}</div>
         <div>${t("printPatient")}: ${ticketData.patientFirst} ${ticketData.patientLast}</div>
         <div>${new Date().toLocaleString()}</div>
+        <div style="margin-top:6px;color:#0088cc;">@sogliqnisaqlash_bot</div>
       </div>
     </div>`;
   area.style.display="block";
@@ -1755,8 +2276,8 @@ function renderDoctorConsole(){
     const div = document.createElement("div");
     div.className = "list-item";
     const pillClass = tk.status==="active" ? "active" : "pending";
-    const pillLabel = tk.status==="active" ? t("waiting") : t("bookingTitle") ? (currentLang==="ru"?"Ожидает оплаты":currentLang==="uz"?"To'lov kutilmoqda":"Awaiting payment") : "";
-    div.innerHTML = `<div><div style="font-weight:700;">#${tk.number} — ${tk.patientFirst} ${tk.patientLast}</div></div>
+    const pillLabel = tk.status==="active" ? t("waiting") : t("bookingTitle") ? (currentLang==="ru"?"РћР¶РёРґР°РµС‚ РѕРїР»Р°С‚С‹":currentLang==="uz"?"To'lov kutilmoqda":"Awaiting payment") : "";
+    div.innerHTML = `<div><div style="font-weight:700;">#${tk.number} вЂ” ${tk.patientFirst} ${tk.patientLast}</div></div>
       <span class="pill ${pillClass}">${pillLabel}</span>`;
     listWrap.appendChild(div);
   });
@@ -1778,9 +2299,199 @@ $("patientNoShowBtn").addEventListener("click", async ()=>{
    ========================================================= */
 function tickClock(){
   const d = new Date();
-  $("clockLabel").textContent = d.toLocaleDateString(currentLang, {weekday:"short", month:"short", day:"numeric"}) + " · " + pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+  $("clockLabel").textContent = d.toLocaleDateString(currentLang, {weekday:"short", month:"short", day:"numeric"}) + " В· " + pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
 }
 setInterval(tickClock, 1000); tickClock();
+
+
+/* =========================================================
+   BREAKS (reception + doctor)
+   ========================================================= */
+function refreshBreakDoctorSelect(){
+  const sel = $("breakDoctorSelect");
+  if(!sel) return;
+  sel.innerHTML = "";
+  Object.entries(DOCTORS||{}).forEach(([id,doc])=>{
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = `${doc.firstName||""} ${doc.lastName||""}`;
+    sel.appendChild(opt);
+  });
+  renderActiveBreaks();
+}
+function renderActiveBreaks(){
+  const wrap = $("activeBreaksList");
+  if(!wrap) return;
+  wrap.innerHTML = "";
+  Object.entries(DOCTORS||{}).forEach(([id,doc])=>{
+    if(doc.breakUntil && doc.breakDate===todayStr()){
+      const div = document.createElement("div");
+      div.className = "list-item";
+      div.innerHTML = `<div><div style="font-weight:700;">${doc.firstName} ${doc.lastName}</div>
+        <div class="meta">${doc.breakStart||""} вЂ“ ${doc.breakUntil} В· ${doc.breakReason||""}</div></div>`;
+      wrap.appendChild(div);
+    }
+  });
+}
+async function applyBreak(doctorId, start, end, reason){
+  try{
+    await updateDoc(doc(db,"doctors",doctorId), {
+      breakStart: start, breakUntil: end, breakReason: reason||"", breakDate: todayStr()
+    });
+    showToast(t("setBreak")+" вњ“", false);
+  }catch(err){ showToast(firebaseErrorMessage(err)); }
+}
+async function clearBreak(doctorId){
+  try{
+    await updateDoc(doc(db,"doctors",doctorId), {
+      breakStart: null, breakUntil: null, breakReason: null, breakDate: null
+    });
+    showToast(t("clearBreak")+" вњ“", false);
+  }catch(err){ showToast(firebaseErrorMessage(err)); }
+}
+if($("setBreakBtn")) $("setBreakBtn").addEventListener("click", async ()=>{
+  const id = $("breakDoctorSelect").value;
+  const start = $("breakStart").value;
+  const end = $("breakEnd").value;
+  const reason = $("breakReason").value.trim();
+  if(!id || !start || !end) return;
+  await applyBreak(id, start, end, reason);
+  renderActiveBreaks();
+});
+if($("clearBreakBtn")) $("clearBreakBtn").addEventListener("click", async ()=>{
+  const id = $("breakDoctorSelect").value;
+  if(!id) return;
+  await clearBreak(id);
+  renderActiveBreaks();
+});
+// Doctor self break
+let breakTargetDoctorId = null;
+if($("docSetBreakBtn")) $("docSetBreakBtn").addEventListener("click", ()=>{
+  breakTargetDoctorId = currentDoctorSelfId;
+  show("breakModalOverlay");
+});
+if($("bmSaveBtn")) $("bmSaveBtn").addEventListener("click", async ()=>{
+  if(!breakTargetDoctorId) return;
+  await applyBreak(breakTargetDoctorId, $("bmStart").value, $("bmEnd").value, $("bmReason").value.trim());
+  hide("breakModalOverlay");
+  renderDoctorConsole();
+});
+
+// Patch openReceptionDash to fill break select
+const _origOpenRec = openReceptionDash;
+openReceptionDash = function(){
+  _origOpenRec();
+  refreshBreakDoctorSelect();
+};
+
+/* =========================================================
+   DARK MODE + KIOSK
+   ========================================================= */
+if(localStorage.getItem("clinic_dark")==="1") document.body.classList.add("dark-mode");
+if($("darkModeBtn")) $("darkModeBtn").addEventListener("click", ()=>{
+  document.body.classList.toggle("dark-mode");
+  localStorage.setItem("clinic_dark", document.body.classList.contains("dark-mode")?"1":"0");
+  $("darkModeBtn").innerHTML = document.body.classList.contains("dark-mode")
+    ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+});
+if(document.body.classList.contains("dark-mode") && $("darkModeBtn")){
+  $("darkModeBtn").innerHTML = '<i class="fa-solid fa-sun"></i>';
+}
+function enterKiosk(){
+  document.body.classList.add("kiosk-mode");
+  const el = document.documentElement;
+  if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  if($("kioskExitBtn")) show("kioskExitBtn");
+  if($("kioskBtn")) hide("kioskBtn");
+}
+function exitKiosk(){
+  document.body.classList.remove("kiosk-mode");
+  if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+  if($("kioskExitBtn")) hide("kioskExitBtn");
+  if($("kioskBtn")) show("kioskBtn");
+}
+if($("kioskBtn")) $("kioskBtn").addEventListener("click", enterKiosk);
+if($("kioskExitBtn")) $("kioskExitBtn").addEventListener("click", exitKiosk);
+document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") exitKiosk(); });
+
+/* =========================================================
+   EXPORT CSV / PDF
+   ========================================================= */
+function buildMonthlyRows(){
+  const rows = [["Date","Ticket#","TicketID","Patient","Doctor","Status","Source"]];
+  Object.entries(TICKETS||{}).forEach(([id,tk])=>{
+    const d = DOCTORS[tk.doctorId]||{};
+    rows.push([
+      tk.date||"", tk.number||"", tk.ticketId||"",
+      `${tk.patientFirst||""} ${tk.patientLast||""}`,
+      `${d.firstName||""} ${d.lastName||""}`,
+      tk.status||"", tk.source||""
+    ]);
+  });
+  return rows;
+}
+if($("exportCsvBtn")) $("exportCsvBtn").addEventListener("click", ()=>{
+  const rows = buildMonthlyRows();
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `clinic-report-${todayStr()}.csv`;
+  a.click();
+});
+if($("exportPdfBtn")) $("exportPdfBtn").addEventListener("click", ()=>{
+  const rows = buildMonthlyRows();
+  const w = window.open("", "_blank");
+  let html = `<html><head><title>Report</title><style>
+    body{font-family:Inter,sans-serif;padding:24px;} table{border-collapse:collapse;width:100%;font-size:12px;}
+    th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;} th{background:#1462A8;color:#fff;}
+    h1{font-size:18px;}</style></head><body>`;
+  html += `<h1>${CONFIG.clinicName||"Clinic"} вЂ” Report ${todayStr()}</h1><table><thead><tr>`;
+  rows[0].forEach(h=> html += `<th>${h}</th>`);
+  html += `</tr></thead><tbody>`;
+  rows.slice(1).forEach(r=>{
+    html += "<tr>" + r.map(c=>`<td>${c}</td>`).join("") + "</tr>";
+  });
+  html += `</tbody></table></body></html>`;
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=> w.print(), 400);
+});
+
+/* i18n extras for new labels */
+const _origApplyI18N = applyI18N;
+applyI18N = function(){
+  _origApplyI18N();
+  if($("tabManager")) $("tabManager").textContent = t("roleManager");
+  if($("mgrDashTitle")) $("mgrDashTitle").textContent = t("mgrDashTitle");
+  if($("btnMgrAddDoctor")) $("btnMgrAddDoctor").textContent = t("addDoctor");
+  if($("mgrDoctorsTitle")) $("mgrDoctorsTitle").textContent = t("doctorsTitle");
+  if($("exportTitle")) $("exportTitle").textContent = t("exportTitle");
+  if($("btnExportCsv")) $("btnExportCsv").textContent = t("exportCsv");
+  if($("btnExportPdf")) $("btnExportPdf").textContent = t("exportPdf");
+  if($("dirCredsTitle")) $("dirCredsTitle").textContent = t("dirCredsTitle");
+  if($("dirCredsHint")) $("dirCredsHint").textContent = t("dirCredsHint");
+  if($("btnDirOpenSettings")) $("btnDirOpenSettings").textContent = t("openCredentials");
+  if($("lblAvgConsult")) $("lblAvgConsult").textContent = t("avgConsult");
+  if($("breakTitle")) $("breakTitle").textContent = t("breakTitle");
+  if($("lblBreakDoctor")) $("lblBreakDoctor").textContent = t("breakDoctor");
+  if($("lblBreakStart")) $("lblBreakStart").textContent = t("breakFrom");
+  if($("lblBreakEnd")) $("lblBreakEnd").textContent = t("breakUntil");
+  if($("lblBreakReason")) $("lblBreakReason").textContent = t("breakReason");
+  if($("btnSetBreak")) $("btnSetBreak").textContent = t("setBreak");
+  if($("btnClearBreak")) $("btnClearBreak").textContent = t("clearBreak");
+  if($("btnDocBreak")) $("btnDocBreak").textContent = t("setBreak");
+  if($("breakModalTitle")) $("breakModalTitle").textContent = t("setBreak");
+  if($("lblBmStart")) $("lblBmStart").textContent = t("breakFrom");
+  if($("lblBmEnd")) $("lblBmEnd").textContent = t("breakUntil");
+  if($("lblBmReason")) $("lblBmReason").textContent = t("breakReason");
+  if($("btnBmSave")) $("btnBmSave").textContent = t("save");
+  if($("lblMgrLogin")) $("lblMgrLogin").textContent = t("mgrLogin");
+  if($("lblMgrPass")) $("lblMgrPass").textContent = t("mgrPass");
+  if($("lblMgrPassConfirm")) $("lblMgrPassConfirm").textContent = t("confirmPass");
+  if($("btnNewTicket")) $("btnNewTicket").textContent = t("newTicket");
+};
+
 
 /* =========================================================
    INIT
