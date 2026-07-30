@@ -1182,9 +1182,6 @@ function getMyTicketsToday(){
   const today = todayStr();
   return getMyTicketsRaw().filter(e=>e.date===today);
 }
-function hasBookedDoctorToday(doctorId){
-  return getMyTicketsToday().some(e=>e.doctorId===doctorId);
-}
 
 /* ---- Text-to-speech announcement (uz, ru, en in sequence) ---- */
 function speakAnnouncement(doctorName, ticketNumber, room){
@@ -1592,11 +1589,7 @@ function renderBookingDoctorList(){
     const div = document.createElement("div");
     let blockedNote = "";
     let blocked = false;
-    if(hasBookedDoctorToday(id)){
-      const mine = getMyTicketsToday().find(e=>e.doctorId===id);
-      blockedNote = t("alreadyBookedNote").replace("{num}", mine ? mine.number : "");
-      blocked = true;
-    } else if(!isBookingOpenNow(doc)){
+    if(!isBookingOpenNow(doc)){
       blockedNote = t("bookingOpensNote").replace("{time}", bookingOpenTimeFor(doc));
       blocked = true;
     } else if(!doctorWorksToday(doc)){
