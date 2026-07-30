@@ -482,6 +482,16 @@ body[data-theme="dark"] .myticket-code{ background:#10243A; }
   display:inline-flex; align-items:center; gap:8px; background:#F5B301; color:#3A2900;
   font-weight:800; font-size:18px; padding:8px 18px; border-radius:999px; margin-top:8px;
 }
+
+/* ================= AUDIO NUMBER CHIPS ================= */
+.num-chip{
+  display:inline-flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line);
+  border-radius:999px; padding:6px 8px 6px 14px; font-family:var(--font-display); font-weight:700; font-size:14px;
+}
+.num-chip button{
+  border:none; background:var(--danger); color:#fff; width:20px; height:20px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:11px;
+}
 </style>
 </head>
 <body>
@@ -731,6 +741,7 @@ body[data-theme="dark"] .myticket-code{ background:#10243A; }
     <h2><i class="fa-solid fa-user-nurse"></i> <span id="recDashTitle">Receptionist panel</span></h2>
     <div style="display:flex;gap:8px;">
       <button class="icon-btn" id="recClinicSettingsBtn" title="Clinic settings"><i class="fa-solid fa-hospital"></i></button>
+      <button class="icon-btn" id="recAudioSettingsBtn" title="Audio announcements"><i class="fa-solid fa-microphone"></i></button>
       <button class="icon-btn" id="recProfileBtn"><i class="fa-solid fa-gear"></i></button>
       <button class="icon-btn" id="recCloseBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
@@ -778,6 +789,56 @@ body[data-theme="dark"] .myticket-code{ background:#10243A; }
       <div class="field"><label id="lblRecNewPassConfirm">Confirm password</label><input type="password" id="recNewPassConfirm"></div>
       <button class="btn btn-primary btn-block" id="recProfileSave"><span id="btnRecProfileSave">Save</span></button>
       <div class="error-msg hidden" id="recProfileError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ AUDIO ANNOUNCEMENTS MODAL ============ -->
+<div class="modal-overlay hidden" id="audioSettingsOverlay">
+  <div class="modal wide">
+    <div class="modal-head"><h2 id="audioSettingsTitle">Audio announcements</h2><button class="modal-close" data-close="audioSettingsOverlay"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <p class="hint" id="audioSettingsHint" style="margin-bottom:14px;">Upload your own voice recordings for each number and for the words "Ticket" and "Room", in each language. The board will play them in sequence when calling a patient.</p>
+      <div class="tabs" id="audioLangTabs">
+        <button class="tab-btn active" data-lang="uz">O'zbekcha</button>
+        <button class="tab-btn" data-lang="ru">Русский</button>
+        <button class="tab-btn" data-lang="en">English</button>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label id="lblWordNavbat">Word: "Ticket"</label>
+          <div class="btn-row" style="margin-top:0;">
+            <input type="file" accept="audio/*" id="wordNavbatFile" style="flex:1;">
+          </div>
+          <div class="hint" id="wordNavbatStatus"></div>
+        </div>
+        <div class="field">
+          <label id="lblWordXona">Word: "Room"</label>
+          <div class="btn-row" style="margin-top:0;">
+            <input type="file" accept="audio/*" id="wordXonaFile" style="flex:1;">
+          </div>
+          <div class="hint" id="wordXonaStatus"></div>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--line);margin:18px 0;">
+
+      <h3 id="numbersUploadTitle" style="font-size:14px;font-weight:800;margin-bottom:10px;">Add a number recording</h3>
+      <div class="row-3">
+        <div class="field" style="margin-bottom:0;">
+          <input type="number" id="numberValueInput" min="0" placeholder="e.g. 13">
+        </div>
+        <div class="field" style="margin-bottom:0;grid-column:span 2;">
+          <input type="file" accept="audio/*" id="numberFileInput">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" id="uploadNumberBtn" style="margin-top:10px;"><i class="fa-solid fa-upload"></i> <span id="btnUploadNumber">Upload</span></button>
+
+      <h3 id="uploadedNumbersTitle" style="font-size:14px;font-weight:800;margin:18px 0 10px;">Uploaded numbers</h3>
+      <div id="uploadedNumbersList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+
+      <div class="error-msg hidden" id="audioSettingsError" style="margin-top:12px;"></div>
     </div>
   </div>
 </div>
@@ -851,8 +912,11 @@ body[data-theme="dark"] .myticket-code{ background:#10243A; }
    ========================================================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, doc, collection, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot
+  getFirestore, doc, collection, addDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPXJzgFwlnvkHgWlUiDOHRErIHVT05QcE",
@@ -865,6 +929,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 /* =========================================================
    I18N
@@ -920,7 +985,11 @@ const I18N = {
     waitTagText:"~{min} min wait", exportExcelBtn:"Export Excel", exportPdfBtn:"Export PDF",
     clinicSettingsTitle:"Clinic settings", btnSaveClinicSettings:"Save",
     pdfReportTitle:"Clinic Traffic Report", pdfCol_date:"Date", pdfCol_doctor:"Doctor", pdfCol_patient:"Patient",
-    pdfCol_number:"Ticket #", pdfCol_status:"Status", pdfCol_dailyTotal:"Daily total", pdfCol_monthlyTotal:"Monthly total"
+    pdfCol_number:"Ticket #", pdfCol_status:"Status", pdfCol_dailyTotal:"Daily total", pdfCol_monthlyTotal:"Monthly total",
+    audioSettingsTitle:"Audio announcements", audioSettingsHint:"Upload your own voice recordings for each number and for the words \"Ticket\" and \"Room\", in each language. The board will play them in sequence when calling a patient.",
+    lblWordNavbat:"Word: \"Ticket\"", lblWordXona:"Word: \"Room\"", numbersUploadTitle:"Add a number recording",
+    btnUploadNumber:"Upload", uploadedNumbersTitle:"Uploaded numbers", audioUploaded:"Uploaded", audioNotUploaded:"Not uploaded yet",
+    audioUploadSuccess:"Uploaded", audioNeedNumberAndFile:"Enter a number and choose a file first."
   },
   ru:{
     boardTitle:"Табло очереди", hTicket:"Талон", hDoctor:"Врач", hPatient:"Пациент", hRoom:"Кабинет", hStatus:"Статус",
@@ -972,7 +1041,11 @@ const I18N = {
     waitTagText:"~{min} мин ожидания", exportExcelBtn:"Экспорт Excel", exportPdfBtn:"Экспорт PDF",
     clinicSettingsTitle:"Настройки клиники", btnSaveClinicSettings:"Сохранить",
     pdfReportTitle:"Отчёт по посещаемости клиники", pdfCol_date:"Дата", pdfCol_doctor:"Врач", pdfCol_patient:"Пациент",
-    pdfCol_number:"Талон №", pdfCol_status:"Статус", pdfCol_dailyTotal:"Итого за день", pdfCol_monthlyTotal:"Итого за месяц"
+    pdfCol_number:"Талон №", pdfCol_status:"Статус", pdfCol_dailyTotal:"Итого за день", pdfCol_monthlyTotal:"Итого за месяц",
+    audioSettingsTitle:"Голосовые объявления", audioSettingsHint:"Загрузите записи своего голоса для каждого числа и для слов \"Талон\" и \"Кабинет\" на каждом языке. Табло будет проигрывать их по порядку при вызове пациента.",
+    lblWordNavbat:"Слово: \"Талон\"", lblWordXona:"Слово: \"Кабинет\"", numbersUploadTitle:"Добавить запись числа",
+    btnUploadNumber:"Загрузить", uploadedNumbersTitle:"Загруженные числа", audioUploaded:"Загружено", audioNotUploaded:"Ещё не загружено",
+    audioUploadSuccess:"Загружено", audioNeedNumberAndFile:"Сначала введите число и выберите файл."
   },
   uz:{
     boardTitle:"Navbat taxtasi", hTicket:"Navbat", hDoctor:"Shifokor", hPatient:"Bemor", hRoom:"Xona", hStatus:"Holat",
@@ -1024,7 +1097,11 @@ const I18N = {
     waitTagText:"~{min} daq. kutish", exportExcelBtn:"Excel eksport", exportPdfBtn:"PDF eksport",
     clinicSettingsTitle:"Klinika sozlamalari", btnSaveClinicSettings:"Saqlash",
     pdfReportTitle:"Klinika tashrif hisoboti", pdfCol_date:"Sana", pdfCol_doctor:"Shifokor", pdfCol_patient:"Bemor",
-    pdfCol_number:"Navbat №", pdfCol_status:"Holat", pdfCol_dailyTotal:"Kunlik jami", pdfCol_monthlyTotal:"Oylik jami"
+    pdfCol_number:"Navbat №", pdfCol_status:"Holat", pdfCol_dailyTotal:"Kunlik jami", pdfCol_monthlyTotal:"Oylik jami",
+    audioSettingsTitle:"Ovozli e'lonlar", audioSettingsHint:"Har bir raqam uchun va \"Navbat\" hamda \"Xona\" so'zlari uchun o'z ovozingizda yozilgan fayllarni har bir tilda yuklang. Taxta bemorni chaqirganda ularni ketma-ket ijro etadi.",
+    lblWordNavbat:"So'z: \"Navbat\"", lblWordXona:"So'z: \"Xona\"", numbersUploadTitle:"Raqam yozuvini qo'shish",
+    btnUploadNumber:"Yuklash", uploadedNumbersTitle:"Yuklangan raqamlar", audioUploaded:"Yuklangan", audioNotUploaded:"Hali yuklanmagan",
+    audioUploadSuccess:"Yuklandi", audioNeedNumberAndFile:"Avval raqamni kiriting va faylni tanlang."
   }
 };
 let currentLang = localStorage.getItem("clinic_lang") || "en";
@@ -1204,12 +1281,48 @@ function speakAnnouncement(doctorName, ticketNumber, room){
   }catch(e){ /* TTS not available */ }
 }
 
+/* ---- Recorded-voice announcement playback (preferred over browser TTS) ---- */
+function playAudioSequence(urls){
+  return new Promise((resolve)=>{
+    const list = urls.filter(Boolean);
+    let i = 0;
+    function playNext(){
+      if(i>=list.length){ resolve(); return; }
+      const url = list[i++];
+      const audioEl = new Audio(url);
+      audioEl.onended = playNext;
+      audioEl.onerror = playNext;
+      audioEl.play().catch(playNext);
+    }
+    playNext();
+  });
+}
+async function announceWithRecordedAudio(doctorName, ticketNumber, room){
+  const audioCfg = (CONFIG.audio) || {};
+  const langs = ["uz","ru","en"];
+  let playedAny = false;
+  for(const lang of langs){
+    const L = audioCfg[lang] || {};
+    const numbers = L.numbers || {};
+    const seq = [L.navbatWord, numbers[String(ticketNumber)], L.xonaWord, room ? numbers[String(room)] : null].filter(Boolean);
+    if(seq.length>0){
+      playedAny = true;
+      await playAudioSequence(seq);
+      await new Promise(r=>setTimeout(r,400));
+    }
+  }
+  if(!playedAny){
+    speakAnnouncement(doctorName, ticketNumber, room);
+  }
+}
+
 /* =========================================================
    FIREBASE LISTENERS
    ========================================================= */
 onSnapshot(doc(db,"config","main"), (snap)=>{
   CONFIG = snap.exists() ? snap.data() : {};
   applyConfigToUI();
+  if(!$("audioSettingsOverlay").classList.contains("hidden")) renderAudioSettings();
 }, (err)=> showToast(firebaseErrorMessage(err)));
 
 onSnapshot(collection(db,"doctors"), (snap)=>{
@@ -1335,6 +1448,14 @@ function applyI18N(){
   $("btnBack0").textContent = t("btnBack0");
   $("btnExportExcel").textContent = t("exportExcelBtn");
   $("btnExportPdf").textContent = t("exportPdfBtn");
+  $("audioSettingsTitle").textContent = t("audioSettingsTitle");
+  $("audioSettingsHint").textContent = t("audioSettingsHint");
+  $("lblWordNavbat").textContent = t("lblWordNavbat");
+  $("lblWordXona").textContent = t("lblWordXona");
+  $("numbersUploadTitle").textContent = t("numbersUploadTitle");
+  $("btnUploadNumber").textContent = t("btnUploadNumber");
+  $("uploadedNumbersTitle").textContent = t("uploadedNumbersTitle");
+  if(!$("audioSettingsOverlay").classList.contains("hidden")) renderAudioSettings();
   renderBoard();
   if(!bookingOverlay.classList.contains("hidden")) renderBookingDoctorList();
   if(!directorDash.classList.contains("hidden")){ renderAnalytics(); }
@@ -1393,7 +1514,7 @@ function renderBoard(){
   const isNewPriority = topKey && topKey !== lastPriorityKey && rows[0].shown;
   if(isNewPriority){
     playChime();
-    speakAnnouncement(rows[0].doc.firstName+" "+rows[0].doc.lastName, rows[0].shown.number, rows[0].doc.room);
+    announceWithRecordedAudio(rows[0].doc.firstName+" "+rows[0].doc.lastName, rows[0].shown.number, rows[0].doc.room);
   }
   lastPriorityKey = topKey;
 
@@ -1996,6 +2117,95 @@ function openReceptionDash(){
 }
 $("recCloseBtn").addEventListener("click", ()=> hide("receptionDash"));
 $("recClinicSettingsBtn").addEventListener("click", ()=> openClinicSettingsModal());
+$("recAudioSettingsBtn").addEventListener("click", ()=> openAudioSettings());
+
+/* ---- Audio announcements management ---- */
+let audioActiveLang = "uz";
+function openAudioSettings(){
+  audioActiveLang = "uz";
+  document.querySelectorAll("#audioLangTabs .tab-btn").forEach(b=> b.classList.toggle("active", b.dataset.lang==="uz"));
+  $("numberValueInput").value = "";
+  $("numberFileInput").value = "";
+  $("wordNavbatFile").value = "";
+  $("wordXonaFile").value = "";
+  hide("audioSettingsError");
+  renderAudioSettings();
+  show("audioSettingsOverlay");
+}
+document.querySelectorAll("#audioLangTabs .tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    audioActiveLang = btn.dataset.lang;
+    document.querySelectorAll("#audioLangTabs .tab-btn").forEach(b=> b.classList.toggle("active", b===btn));
+    renderAudioSettings();
+  });
+});
+function renderAudioSettings(){
+  const L = (CONFIG.audio && CONFIG.audio[audioActiveLang]) || {};
+  $("wordNavbatStatus").textContent = L.navbatWord ? t("audioUploaded") : t("audioNotUploaded");
+  $("wordXonaStatus").textContent = L.xonaWord ? t("audioUploaded") : t("audioNotUploaded");
+  const numbers = L.numbers || {};
+  const wrap = $("uploadedNumbersList");
+  wrap.innerHTML = "";
+  Object.keys(numbers).sort((a,b)=>Number(a)-Number(b)).forEach(n=>{
+    const chip = document.createElement("div");
+    chip.className = "num-chip";
+    chip.innerHTML = `<span>${n}</span><button title="delete"><i class="fa-solid fa-xmark"></i></button>`;
+    chip.querySelector("button").addEventListener("click", ()=> deleteNumberAudio(audioActiveLang, n));
+    wrap.appendChild(chip);
+  });
+}
+async function uploadWordAudio(lang, wordKey, file){
+  try{
+    const path = `audio/${lang}/word_${wordKey}_${Date.now()}`;
+    const storageRef = sRef(storage, path);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    await updateDoc(doc(db,"config","main"), {[`audio.${lang}.${wordKey}`]: url});
+    showToast(t("audioUploadSuccess")+" ✓", false);
+  }catch(err){
+    $("audioSettingsError").textContent = firebaseErrorMessage(err);
+    show("audioSettingsError");
+  }
+}
+$("wordNavbatFile").addEventListener("change", ()=>{
+  const file = $("wordNavbatFile").files[0];
+  if(file) uploadWordAudio(audioActiveLang, "navbatWord", file);
+});
+$("wordXonaFile").addEventListener("change", ()=>{
+  const file = $("wordXonaFile").files[0];
+  if(file) uploadWordAudio(audioActiveLang, "xonaWord", file);
+});
+$("uploadNumberBtn").addEventListener("click", async ()=>{
+  const n = $("numberValueInput").value.trim();
+  const file = $("numberFileInput").files[0];
+  if(n==="" || !file){
+    $("audioSettingsError").textContent = t("audioNeedNumberAndFile");
+    show("audioSettingsError");
+    return;
+  }
+  hide("audioSettingsError");
+  try{
+    const path = `audio/${audioActiveLang}/number_${n}_${Date.now()}`;
+    const storageRef = sRef(storage, path);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    await updateDoc(doc(db,"config","main"), {[`audio.${audioActiveLang}.numbers.${n}`]: url});
+    $("numberValueInput").value = "";
+    $("numberFileInput").value = "";
+    showToast(t("audioUploadSuccess")+" ✓", false);
+  }catch(err){
+    $("audioSettingsError").textContent = firebaseErrorMessage(err);
+    show("audioSettingsError");
+  }
+});
+async function deleteNumberAudio(lang, n){
+  try{
+    await updateDoc(doc(db,"config","main"), {[`audio.${lang}.numbers.${n}`]: deleteField()});
+  }catch(err){
+    showToast(firebaseErrorMessage(err));
+  }
+}
+
 $("recProfileBtn").addEventListener("click", ()=>{
   $("recNewLogin").value = CONFIG.receptionistLogin||"bbb";
   $("recNewPass").value=""; $("recNewPassConfirm").value="";
