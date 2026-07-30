@@ -201,9 +201,9 @@ header.topbar{
 .badge.consult{background:rgba(0,184,169,.18); color:var(--teal);}
 
 .board-row.priority{
-  transform:scale(1.06);
   background:linear-gradient(180deg,#17243B,#0F1B2E);
   box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 0 40px rgba(255,176,32,.55);
+  padding:26px 18px;
   z-index:5;
   animation: glowPulse 1.4s ease-in-out infinite;
 }
@@ -1309,7 +1309,7 @@ async function announceWithRecordedAudio(doctorName, ticketNumber, room){
     const xonaUrl = AUDIO_CLIPS[`${lang}_word_xona`];
     const numUrl = AUDIO_CLIPS[`${lang}_number_${ticketNumber}`];
     const roomUrl = room ? AUDIO_CLIPS[`${lang}_number_${room}`] : null;
-    const seq = [navbatUrl, numUrl, xonaUrl, roomUrl].filter(Boolean);
+    const seq = [numUrl, navbatUrl, roomUrl, xonaUrl].filter(Boolean);
     if(seq.length>0){
       playedAny = true;
       await playAudioSequence(seq);
