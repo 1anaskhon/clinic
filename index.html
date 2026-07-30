@@ -1189,9 +1189,9 @@ function speakAnnouncement(doctorName, ticketNumber, room){
   try{
     window.speechSynthesis.cancel();
     const phrases = [
-      {text:`Navbat raqam ${ticketNumber}, ${doctorName}, ${room?("xona "+room):""} qabuliga kiring.`, lang:"uz-UZ"},
-      {text:`Талон номер ${ticketNumber}, ${doctorName}, пройдите ${room?("в кабинет "+room):"на приём"}.`, lang:"ru-RU"},
-      {text:`Ticket number ${ticketNumber}, ${doctorName}, please enter ${room?("room "+room):"the office"}.`, lang:"en-US"}
+      {text:`Navbat raqam ${ticketNumber}, ${room?("xona "+room+" ga"):""} kiring.`, lang:"uz-UZ"},
+      {text:`Талон номер ${ticketNumber}, пройдите ${room?("в кабинет "+room):"на приём"}.`, lang:"ru-RU"},
+      {text:`Ticket number ${ticketNumber}, please enter ${room?("room "+room):"the office"}.`, lang:"en-US"}
     ];
     let delay = 0;
     phrases.forEach(p=>{
