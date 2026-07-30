@@ -151,7 +151,7 @@ header.topbar{
 }
 .board-head-row, .board-row{
   display:grid;
-  grid-template-columns: 110px 1fr 190px 130px;
+  grid-template-columns: minmax(100px, auto) 1fr minmax(170px, auto) minmax(110px, auto);
   align-items:center;
   gap:10px;
   padding:14px 18px;
@@ -164,7 +164,7 @@ header.topbar{
   font-weight:700;
   padding-bottom:8px;
 }
-.board-body{display:flex; flex-direction:column; gap:8px; max-height:70vh; overflow-y:auto; scrollbar-width:thin;}
+.board-body{display:flex; flex-direction:column; gap:8px; max-height:70vh; overflow-y:auto; scrollbar-width:thin; padding-top:10px;}
 .board-row{
   background:var(--ink-2);
   border-radius:12px;
@@ -180,6 +180,7 @@ header.topbar{
   font-weight:700;
   color:var(--amber);
   letter-spacing:1px;
+  white-space:nowrap;
 }
 .board-row .doc-name{font-weight:800; font-size:20px;}
 .board-row .doc-spec{font-size:14px; color:#93A5C4; margin-top:3px;}
@@ -478,6 +479,13 @@ body[data-theme="dark"] .myticket-code{ background:#10243A; }
   font-weight:800; font-size:12px; padding:4px 10px; border-radius:999px; letter-spacing:.5px;
 }
 .board-row .vip-badge{ font-size:14px; padding:5px 12px; }
+.board-row .vip-ribbon{
+  position:absolute; top:-10px; left:16px; z-index:6;
+  display:inline-flex; align-items:center; gap:5px; background:#F5B301; color:#3A2900;
+  font-weight:800; font-size:12px; padding:4px 12px; border-radius:999px; letter-spacing:.5px;
+  box-shadow:0 3px 8px rgba(0,0,0,.35);
+}
+body.kiosk-mode .board-row .vip-ribbon{ font-size:1.1vw; padding:0.5vh 1.1vw; top:-1.2vh; left:1.2vw; }
 .ticket-slip .vip-badge-big{
   display:inline-flex; align-items:center; gap:8px; background:#F5B301; color:#3A2900;
   font-weight:800; font-size:18px; padding:8px 18px; border-radius:999px; margin-top:8px;
@@ -914,9 +922,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getFirestore, doc, collection, addDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import {
-  getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPXJzgFwlnvkHgWlUiDOHRErIHVT05QcE",
@@ -929,7 +934,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 /* =========================================================
    I18N
@@ -1298,13 +1302,14 @@ function playAudioSequence(urls){
   });
 }
 async function announceWithRecordedAudio(doctorName, ticketNumber, room){
-  const audioCfg = (CONFIG.audio) || {};
   const langs = ["uz","ru","en"];
   let playedAny = false;
   for(const lang of langs){
-    const L = audioCfg[lang] || {};
-    const numbers = L.numbers || {};
-    const seq = [L.navbatWord, numbers[String(ticketNumber)], L.xonaWord, room ? numbers[String(room)] : null].filter(Boolean);
+    const navbatUrl = AUDIO_CLIPS[`${lang}_word_navbat`];
+    const xonaUrl = AUDIO_CLIPS[`${lang}_word_xona`];
+    const numUrl = AUDIO_CLIPS[`${lang}_number_${ticketNumber}`];
+    const roomUrl = room ? AUDIO_CLIPS[`${lang}_number_${room}`] : null;
+    const seq = [navbatUrl, numUrl, xonaUrl, roomUrl].filter(Boolean);
     if(seq.length>0){
       playedAny = true;
       await playAudioSequence(seq);
@@ -1322,6 +1327,13 @@ async function announceWithRecordedAudio(doctorName, ticketNumber, room){
 onSnapshot(doc(db,"config","main"), (snap)=>{
   CONFIG = snap.exists() ? snap.data() : {};
   applyConfigToUI();
+}, (err)=> showToast(firebaseErrorMessage(err)));
+
+let AUDIO_CLIPS = {};
+onSnapshot(collection(db,"audioClips"), (snap)=>{
+  const obj = {};
+  snap.forEach(d=>{ obj[d.id] = d.data().dataUrl; });
+  AUDIO_CLIPS = obj;
   if(!$("audioSettingsOverlay").classList.contains("hidden")) renderAudioSettings();
 }, (err)=> showToast(firebaseErrorMessage(err)));
 
@@ -1525,12 +1537,13 @@ function renderBoard(){
     div.className = "board-row" + (idx===0 && r.shown ? " priority" : "") + (paused ? " paused" : "");
     const numText = r.shown ? "#"+r.shown.number : "-";
     const status = r.shown ? r.shown.status : "";
-    const vipBadge = (r.shown && r.shown.isVip) ? `<span class="vip-badge"><i class="fa-solid fa-star"></i> VIP</span>` : "";
+    const vipRibbon = (r.shown && r.shown.isVip) ? `<div class="vip-ribbon"><i class="fa-solid fa-star"></i> VIP</div>` : "";
     const nameLine = paused
       ? t("pausedNote").replace("{time}", r.doc.pauseEnd||"")
       : (r.doc.firstName||"")+" "+(r.doc.lastName||"");
     div.innerHTML = `
-      <div class="num split-flap"><span>${numText}</span>${vipBadge ? "<br>"+vipBadge : ""}</div>
+      ${vipRibbon}
+      <div class="num split-flap"><span>${numText}</span></div>
       <div><div class="doc-name">${r.doc.specialty||""}</div><div class="doc-spec">${nameLine}</div></div>
       <div class="room-big"><span class="r-num">${r.doc.room ? (t("room")+" "+r.doc.room) : ""}</span><span class="r-count">${r.waitingCount} ${t("patientsWaiting")}</span></div>
       <div>${r.shown ? statusBadge(status) : `<span class="badge waiting">${t("waiting")}</span>`}</div>
@@ -2140,13 +2153,18 @@ document.querySelectorAll("#audioLangTabs .tab-btn").forEach(btn=>{
   });
 });
 function renderAudioSettings(){
-  const L = (CONFIG.audio && CONFIG.audio[audioActiveLang]) || {};
-  $("wordNavbatStatus").textContent = L.navbatWord ? t("audioUploaded") : t("audioNotUploaded");
-  $("wordXonaStatus").textContent = L.xonaWord ? t("audioUploaded") : t("audioNotUploaded");
-  const numbers = L.numbers || {};
+  const navbatUrl = AUDIO_CLIPS[`${audioActiveLang}_word_navbat`];
+  const xonaUrl = AUDIO_CLIPS[`${audioActiveLang}_word_xona`];
+  $("wordNavbatStatus").textContent = navbatUrl ? t("audioUploaded") : t("audioNotUploaded");
+  $("wordXonaStatus").textContent = xonaUrl ? t("audioUploaded") : t("audioNotUploaded");
+  const prefix = `${audioActiveLang}_number_`;
+  const numbers = Object.keys(AUDIO_CLIPS)
+    .filter(k=>k.startsWith(prefix))
+    .map(k=>k.slice(prefix.length))
+    .sort((a,b)=>Number(a)-Number(b));
   const wrap = $("uploadedNumbersList");
   wrap.innerHTML = "";
-  Object.keys(numbers).sort((a,b)=>Number(a)-Number(b)).forEach(n=>{
+  numbers.forEach(n=>{
     const chip = document.createElement("div");
     chip.className = "num-chip";
     chip.innerHTML = `<span>${n}</span><button title="delete"><i class="fa-solid fa-xmark"></i></button>`;
@@ -2154,17 +2172,28 @@ function renderAudioSettings(){
     wrap.appendChild(chip);
   });
 }
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+const MAX_AUDIO_BYTES = 700*1024; // keep clips small so they fit safely inside a single Firestore document
 async function uploadWordAudio(lang, wordKey, file){
   try{
-    const path = `audio/${lang}/word_${wordKey}_${Date.now()}`;
-    const storageRef = sRef(storage, path);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    await updateDoc(doc(db,"config","main"), {[`audio.${lang}.${wordKey}`]: url});
-    showToast(t("audioUploadSuccess")+" ✓", false);
+    if(file.size > MAX_AUDIO_BYTES){
+      throw new Error("Fayl juda katta (max ~700KB). Iltimos qisqaroq yozib oling.");
+    }
+    const dataUrl = await fileToDataURL(file);
+    const key = `${lang}_word_${wordKey==="navbatWord" ? "navbat" : "xona"}`;
+    await setDoc(doc(db,"audioClips",key), {dataUrl, updatedAt:Date.now()});
+    showToast(t("audioUploadSuccess")+" \u2713", false);
   }catch(err){
     $("audioSettingsError").textContent = firebaseErrorMessage(err);
     show("audioSettingsError");
+    showToast(firebaseErrorMessage(err));
   }
 }
 $("wordNavbatFile").addEventListener("change", ()=>{
@@ -2185,22 +2214,24 @@ $("uploadNumberBtn").addEventListener("click", async ()=>{
   }
   hide("audioSettingsError");
   try{
-    const path = `audio/${audioActiveLang}/number_${n}_${Date.now()}`;
-    const storageRef = sRef(storage, path);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    await updateDoc(doc(db,"config","main"), {[`audio.${audioActiveLang}.numbers.${n}`]: url});
+    if(file.size > MAX_AUDIO_BYTES){
+      throw new Error("Fayl juda katta (max ~700KB). Iltimos qisqaroq yozib oling.");
+    }
+    const dataUrl = await fileToDataURL(file);
+    const key = `${audioActiveLang}_number_${n}`;
+    await setDoc(doc(db,"audioClips",key), {dataUrl, number:n, updatedAt:Date.now()});
     $("numberValueInput").value = "";
     $("numberFileInput").value = "";
-    showToast(t("audioUploadSuccess")+" ✓", false);
+    showToast(t("audioUploadSuccess")+" \u2713", false);
   }catch(err){
     $("audioSettingsError").textContent = firebaseErrorMessage(err);
     show("audioSettingsError");
+    showToast(firebaseErrorMessage(err));
   }
 });
 async function deleteNumberAudio(lang, n){
   try{
-    await updateDoc(doc(db,"config","main"), {[`audio.${lang}.numbers.${n}`]: deleteField()});
+    await deleteDoc(doc(db,"audioClips", `${lang}_number_${n}`));
   }catch(err){
     showToast(firebaseErrorMessage(err));
   }
