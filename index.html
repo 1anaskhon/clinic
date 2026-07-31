@@ -784,6 +784,11 @@ body.kiosk-mode .board-row .vip-ribbon{ font-size:1.1vw; padding:0.5vh 1.1vw; to
       <h3><i class="fa-solid fa-money-check-dollar"></i> <span id="pendingTitle">Pending online bookings</span></h3>
       <div id="pendingList"></div>
     </div>
+    <div class="card" style="border-color:#F5C2C7;">
+      <h3 style="color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> <span id="dangerZoneTitle">Danger zone</span></h3>
+      <p class="hint" id="cancelAllHint" style="margin-bottom:12px;"></p>
+      <button class="btn btn-danger btn-block" id="cancelAllTicketsBtn"><i class="fa-solid fa-trash"></i> <span id="btnCancelAllTickets">Cancel all tickets</span></button>
+    </div>
   </div>
 </div>
 
@@ -990,10 +995,15 @@ const I18N = {
     clinicSettingsTitle:"Clinic settings", btnSaveClinicSettings:"Save",
     pdfReportTitle:"Clinic Traffic Report", pdfCol_date:"Date", pdfCol_doctor:"Doctor", pdfCol_patient:"Patient",
     pdfCol_number:"Ticket #", pdfCol_status:"Status", pdfCol_dailyTotal:"Daily total", pdfCol_monthlyTotal:"Monthly total",
-    audioSettingsTitle:"Audio announcements", audioSettingsHint:"Upload your own voice recordings for each number and for the words \"Ticket\" and \"Room\", in each language. The board will play them in sequence when calling a patient.",
+    audioSettingsTitle:"Audio announcements", audioSettingsHint:"You only need to upload 1-9, then the tens 10,20...90, then the hundreds 100,200...900, plus the words \"Ticket\" and \"Room\" - for each language. The system automatically combines them for any number (e.g. 46 = 40 + 6).",
     lblWordNavbat:"Word: \"Ticket\"", lblWordXona:"Word: \"Room\"", numbersUploadTitle:"Add a number recording",
     btnUploadNumber:"Upload", uploadedNumbersTitle:"Uploaded numbers", audioUploaded:"Uploaded", audioNotUploaded:"Not uploaded yet",
-    audioUploadSuccess:"Uploaded", audioNeedNumberAndFile:"Enter a number and choose a file first."
+    audioUploadSuccess:"Uploaded", audioNeedNumberAndFile:"Enter a number and choose a file first.",
+    dangerZoneTitle:"Danger zone", cancelAllHint:"Deletes every ticket taken today (online and walk-in) and resets numbering to 1. This cannot be undone.",
+    btnCancelAllTickets:"Cancel all today's tickets", confirmCancelAll:"This will permanently delete ALL of today's tickets. Continue?",
+    cancelAllDone:"All of today's tickets were cancelled.",
+    printValidToday:"This ticket slip is valid for TODAY only - it cannot be obtained a day in advance.",
+    printNoForgery:"Do not forge this ticket slip - forged slips are detected on our end."
   },
   ru:{
     boardTitle:"Табло очереди", hTicket:"Талон", hDoctor:"Врач", hPatient:"Пациент", hRoom:"Кабинет", hStatus:"Статус",
@@ -1046,10 +1056,15 @@ const I18N = {
     clinicSettingsTitle:"Настройки клиники", btnSaveClinicSettings:"Сохранить",
     pdfReportTitle:"Отчёт по посещаемости клиники", pdfCol_date:"Дата", pdfCol_doctor:"Врач", pdfCol_patient:"Пациент",
     pdfCol_number:"Талон №", pdfCol_status:"Статус", pdfCol_dailyTotal:"Итого за день", pdfCol_monthlyTotal:"Итого за месяц",
-    audioSettingsTitle:"Голосовые объявления", audioSettingsHint:"Загрузите записи своего голоса для каждого числа и для слов \"Талон\" и \"Кабинет\" на каждом языке. Табло будет проигрывать их по порядку при вызове пациента.",
+    audioSettingsTitle:"Голосовые объявления", audioSettingsHint:"Достаточно загрузить 1-9, затем десятки 10,20...90, затем сотни 100,200...900, плюс слова \"Талон\" и \"Кабинет\" - для каждого языка. Система сама соберёт любое число (например 46 = 40 + 6).",
     lblWordNavbat:"Слово: \"Талон\"", lblWordXona:"Слово: \"Кабинет\"", numbersUploadTitle:"Добавить запись числа",
     btnUploadNumber:"Загрузить", uploadedNumbersTitle:"Загруженные числа", audioUploaded:"Загружено", audioNotUploaded:"Ещё не загружено",
-    audioUploadSuccess:"Загружено", audioNeedNumberAndFile:"Сначала введите число и выберите файл."
+    audioUploadSuccess:"Загружено", audioNeedNumberAndFile:"Сначала введите число и выберите файл.",
+    dangerZoneTitle:"Опасная зона", cancelAllHint:"Удаляет все талоны, взятые сегодня (онлайн и на месте), и сбрасывает нумерацию на 1. Это действие необратимо.",
+    btnCancelAllTickets:"Отменить все сегодняшние талоны", confirmCancelAll:"Это навсегда удалит ВСЕ сегодняшние талоны. Продолжить?",
+    cancelAllDone:"Все сегодняшние талоны отменены.",
+    printValidToday:"Этот талон действителен только на СЕГОДНЯ - получить его заранее нельзя.",
+    printNoForgery:"Не подделывайте этот талон - подделка будет обнаружена."
   },
   uz:{
     boardTitle:"Navbat taxtasi", hTicket:"Navbat", hDoctor:"Shifokor", hPatient:"Bemor", hRoom:"Xona", hStatus:"Holat",
@@ -1102,10 +1117,15 @@ const I18N = {
     clinicSettingsTitle:"Klinika sozlamalari", btnSaveClinicSettings:"Saqlash",
     pdfReportTitle:"Klinika tashrif hisoboti", pdfCol_date:"Sana", pdfCol_doctor:"Shifokor", pdfCol_patient:"Bemor",
     pdfCol_number:"Navbat №", pdfCol_status:"Holat", pdfCol_dailyTotal:"Kunlik jami", pdfCol_monthlyTotal:"Oylik jami",
-    audioSettingsTitle:"Ovozli e'lonlar", audioSettingsHint:"Har bir raqam uchun va \"Navbat\" hamda \"Xona\" so'zlari uchun o'z ovozingizda yozilgan fayllarni har bir tilda yuklang. Taxta bemorni chaqirganda ularni ketma-ket ijro etadi.",
+    audioSettingsTitle:"Ovozli e'lonlar", audioSettingsHint:"Faqat 1-9 gacha, keyin o'nliklar 10,20...90, keyin yuzliklar 100,200...900, va \"Navbat\" hamda \"Xona\" so'zlarini yuklasangiz yetarli - har bir til uchun. Tizim istalgan sonni o'zi qo'shib o'qiydi (masalan 46 = 40 + 6).",
     lblWordNavbat:"So'z: \"Navbat\"", lblWordXona:"So'z: \"Xona\"", numbersUploadTitle:"Raqam yozuvini qo'shish",
     btnUploadNumber:"Yuklash", uploadedNumbersTitle:"Yuklangan raqamlar", audioUploaded:"Yuklangan", audioNotUploaded:"Hali yuklanmagan",
-    audioUploadSuccess:"Yuklandi", audioNeedNumberAndFile:"Avval raqamni kiriting va faylni tanlang."
+    audioUploadSuccess:"Yuklandi", audioNeedNumberAndFile:"Avval raqamni kiriting va faylni tanlang.",
+    dangerZoneTitle:"Xavfli hudud", cancelAllHint:"Bugun olingan barcha navbatlarni (onlayn va joyida) o'chiradi va raqamlashni 1 dan qayta boshlaydi. Bu amalni ortga qaytarib bo'lmaydi.",
+    btnCancelAllTickets:"Bugungi barcha navbatlarni bekor qilish", confirmCancelAll:"Bu bugungi BARCHA navbatlarni butunlay o'chirib tashlaydi. Davom etasizmi?",
+    cancelAllDone:"Bugungi barcha navbatlar bekor qilindi.",
+    printValidToday:"Bu navbat varag'i faqat BUGUN uchun ishlaydi - uni bir kun oldin olib bo'lmaydi.",
+    printNoForgery:"Navbat varag'ini qalbakilashtirmang - qalbaki varaqni biz bilib qolamiz."
   }
 };
 let currentLang = localStorage.getItem("clinic_lang") || "en";
@@ -1301,15 +1321,34 @@ function playAudioSequence(urls){
     playNext();
   });
 }
+/* Break any number into recorded parts: hundreds (100,200..900), tens (10,20..90), ones (1..9).
+   Lets the receptionist upload just those 25 clips per language instead of one per possible number. */
+function numberClipUrls(lang, n){
+  n = Number(n);
+  if(!n || n<1) return [];
+  const parts = [];
+  const hundreds = Math.floor(n/100)*100;
+  const remainder = n%100;
+  if(hundreds>0) parts.push(hundreds);
+  if(remainder>0 && remainder<10){
+    parts.push(remainder);
+  } else if(remainder>=10){
+    const tens = Math.floor(remainder/10)*10;
+    const ones = remainder%10;
+    if(tens>0) parts.push(tens);
+    if(ones>0) parts.push(ones);
+  }
+  return parts.map(p=> AUDIO_CLIPS[`${lang}_number_${p}`]);
+}
 async function announceWithRecordedAudio(doctorName, ticketNumber, room){
   const langs = ["uz","ru","en"];
   let playedAny = false;
   for(const lang of langs){
     const navbatUrl = AUDIO_CLIPS[`${lang}_word_navbat`];
     const xonaUrl = AUDIO_CLIPS[`${lang}_word_xona`];
-    const numUrl = AUDIO_CLIPS[`${lang}_number_${ticketNumber}`];
-    const roomUrl = room ? AUDIO_CLIPS[`${lang}_number_${room}`] : null;
-    const seq = [numUrl, navbatUrl, roomUrl, xonaUrl].filter(Boolean);
+    const numUrls = numberClipUrls(lang, ticketNumber);
+    const roomUrls = room ? numberClipUrls(lang, room) : [];
+    const seq = [...numUrls, navbatUrl, ...roomUrls, xonaUrl].filter(Boolean);
     if(seq.length>0){
       playedAny = true;
       await playAudioSequence(seq);
@@ -1467,6 +1506,9 @@ function applyI18N(){
   $("numbersUploadTitle").textContent = t("numbersUploadTitle");
   $("btnUploadNumber").textContent = t("btnUploadNumber");
   $("uploadedNumbersTitle").textContent = t("uploadedNumbersTitle");
+  $("dangerZoneTitle").textContent = t("dangerZoneTitle");
+  $("cancelAllHint").textContent = t("cancelAllHint");
+  $("btnCancelAllTickets").textContent = t("btnCancelAllTickets");
   if(!$("audioSettingsOverlay").classList.contains("hidden")) renderAudioSettings();
   renderBoard();
   if(!bookingOverlay.classList.contains("hidden")) renderBookingDoctorList();
@@ -1526,7 +1568,12 @@ function renderBoard(){
   const isNewPriority = topKey && topKey !== lastPriorityKey && rows[0].shown;
   if(isNewPriority){
     playChime();
-    announceWithRecordedAudio(rows[0].doc.firstName+" "+rows[0].doc.lastName, rows[0].shown.number, rows[0].doc.room);
+    const calledDoctorName = rows[0].doc.firstName+" "+rows[0].doc.lastName;
+    const calledNumber = rows[0].shown.number;
+    const calledRoom = rows[0].doc.room;
+    setTimeout(()=>{
+      announceWithRecordedAudio(calledDoctorName, calledNumber, calledRoom);
+    }, 1000);
   }
   lastPriorityKey = topKey;
 
@@ -2303,6 +2350,22 @@ $("createWalkInBtn").addEventListener("click", async ()=>{
   }
 });
 
+$("cancelAllTicketsBtn").addEventListener("click", async ()=>{
+  if(!confirm(t("confirmCancelAll"))) return;
+  try{
+    const today = todayStr();
+    const idsToDelete = Object.entries(TICKETS||{})
+      .filter(([id,tk])=> tk.date===today)
+      .map(([id])=>id);
+    for(const id of idsToDelete){
+      await deleteDoc(doc(db,"tickets",id));
+    }
+    showToast(t("cancelAllDone"), false);
+  }catch(err){
+    showToast(firebaseErrorMessage(err));
+  }
+});
+
 function renderPendingList(){
   const wrap = $("pendingList");
   const pending = Object.entries(TICKETS||{})
@@ -2355,6 +2418,14 @@ function printTicket(ticketData){
         <div>${t("printRoom")}: <strong>${doc.room||"-"}</strong></div>
         <div>${t("printPatient")}: <strong>${ticketData.patientFirst} ${ticketData.patientLast}</strong></div>
         <div style="color:#555;font-size:16px;margin-top:10px;">${new Date().toLocaleString()}</div>
+      </div>
+      <div style="margin-top:40px; max-width:420px; margin-left:auto; margin-right:auto; text-align:left;">
+        <div style="display:flex; align-items:flex-start; gap:8px; font-size:12px; color:#444; margin-bottom:8px;">
+          <span style="flex:none;">&#9888;&#65039;</span><span>${t("printValidToday")}</span>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:8px; font-size:12px; color:#444;">
+          <span style="flex:none;">&#9888;&#65039;</span><span>${t("printNoForgery")}</span>
+        </div>
       </div>
     </div>`;
   area.style.display="block";
