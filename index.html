@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Clinic Queue Board</title>
+<title>SHIFOXONA</title>
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -550,7 +550,7 @@ body.kiosk-mode .board-row .vip-ribbon{ font-size:1.1vw; padding:0.5vh 1.1vw; to
   <div id="skipBannerWrap"></div>
 </main>
 
-<footer class="app-foot" id="appFoot">Clinic Queue &amp; Management System</footer>
+<footer class="app-foot" id="appFoot">made by Karakhujayev Anaskhon</footer>
 
 <button class="fab" id="getTicketFab"><i class="fa-solid fa-ticket"></i><span id="fabLabel">Get Ticket</span></button>
 
@@ -979,7 +979,7 @@ const I18N = {
     ticketWord:"Ticket", patientsWaiting:"waiting", room:"Room",
     statTotalDoctors:"Active doctors", statToday:"Seen today", stat30:"Seen (30 days)", statQueue:"Currently waiting",
     printClinic:"Clinic ticket", printDoctor:"Doctor", printPatient:"Patient", printRoom:"Room", printTicket:"Ticket #",
-    footer:"Clinic Queue & Management System", noDoctors:"No doctors configured yet.",
+    footer:"made by Karakhujayev Anaskhon", noDoctors:"No doctors configured yet.",
     walkInBooked:"Ticket created", noPending:"No pending bookings.",
     statusExpiredNote:"Expired - turn passed", loginRequiredAdmin:"Enter details to continue",
     avgTimeHint:"Used only to estimate patients' waiting time - going over this is fine.",
@@ -1124,8 +1124,8 @@ const I18N = {
     dangerZoneTitle:"Xavfli hudud", cancelAllHint:"Bugun olingan barcha navbatlarni (onlayn va joyida) o'chiradi va raqamlashni 1 dan qayta boshlaydi. Bu amalni ortga qaytarib bo'lmaydi.",
     btnCancelAllTickets:"Bugungi barcha navbatlarni bekor qilish", confirmCancelAll:"Bu bugungi BARCHA navbatlarni butunlay o'chirib tashlaydi. Davom etasizmi?",
     cancelAllDone:"Bugungi barcha navbatlar bekor qilindi.",
-    printValidToday:"Bu navbat varag'i faqat BUGUN uchun ishlaydi - uni bir kun oldin olib bo'lmaydi.",
-    printNoForgery:"Navbat varag'ini qalbakilashtirmang - qalbaki varaqni biz bilib qolamiz."
+    printValidToday:"Bu navbat varag'i faqat BIRKUN ishlaydi - uni bir kun oldin olini foydasi yoq!",
+    printNoForgery:"Navbat varag'ini qalbakilashtirmang - qalbaki varag' bilan bemor kiritilmaydi!"
   }
 };
 let currentLang = localStorage.getItem("clinic_lang") || "en";
@@ -2609,7 +2609,6 @@ $("kioskBtn").addEventListener("click", ()=>{
   kioskOn = !kioskOn;
   applyKiosk(kioskOn);
 });
-
 /* =========================================================
    INIT
    ========================================================= */
