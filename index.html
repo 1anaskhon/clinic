@@ -1103,7 +1103,7 @@ const I18N = {
     printClinic:"Klinika navbati", printDoctor:"Shifokor", printPatient:"Bemor", printRoom:"Xona", printTicket:"Navbat №",
     footer:"Klinika navbat va boshqaruv tizimi", noDoctors:"Hali shifokorlar qo'shilmagan.",
     walkInBooked:"Navbat yaratildi", noPending:"Kutilayotgan bronlar yo'q.",
-    statusExpiredNote:"Muddati o'tgan - navbat o'tib ketdi", loginRequiredAdmin:"Davom etish uchun ma'lumot kiriting",
+    statusExpiredNote:"Muddati o'tgan - navbat o'tib ketgan", loginRequiredAdmin:"Davom etish uchun ma'lumot kiriting",
     avgTimeHint:"Faqat bemorlarga taxminiy kutish vaqtini ko'rsatish uchun ishlatiladi - undan oshsa ham bo'laveradi.",
     lblAvgTime:"1 bemor uchun taxminiy vaqt (daqiqa)", lblPauseToday:"Bugun vaqtincha to'xtatish (tanaffus/favqulodda holat)",
     pauseCardTitle:"Vaqtincha pauza", btnSetPause:"Pauza qo'yish", btnClearPause:"Tozalash",
@@ -1122,7 +1122,7 @@ const I18N = {
     btnUploadNumber:"Yuklash", uploadedNumbersTitle:"Yuklangan raqamlar", audioUploaded:"Yuklangan", audioNotUploaded:"Hali yuklanmagan",
     audioUploadSuccess:"Yuklandi", audioNeedNumberAndFile:"Avval raqamni kiriting va faylni tanlang.",
     dangerZoneTitle:"Xavfli hudud", cancelAllHint:"Bugun olingan barcha navbatlarni (onlayn va joyida) o'chiradi va raqamlashni 1 dan qayta boshlaydi. Bu amalni ortga qaytarib bo'lmaydi.",
-    btnCancelAllTickets:"Bugungi barcha navbatlarni bekor qilish", confirmCancelAll:"Bu bugungi BARCHA navbatlarni butunlay o'chirib tashlaydi. Davom etasizmi?",
+    btnCancelAllTickets:"NAVBATLARNI BEKOR QILISH", confirmCancelAll:"Bu bugungi BARCHA navbatlarni butunlay o'chirib tashlaydi. Davom etasizmi?",
     cancelAllDone:"Bugungi barcha navbatlar bekor qilindi.",
     printValidToday:"Bu navbat varag'i faqat BUGUN uchun ishlaydi - uni bir kun oldin olib bo'lmaydi.",
     printNoForgery:"Navbat varag'ini qalbakilashtirmang - qalbaki varaqni biz bilib qolamiz."
@@ -1149,6 +1149,7 @@ let leafletPickMap = null, leafletPickMarker = null;
 let pickedLocation = null;
 let trafficChartInstance = null;
 let lastPriorityKey = "";
+let autoResetInFlight = false;
 
 const DAY_KEYS = ["mon","tue","wed","thu","fri","sat","sun"];
 
@@ -1186,24 +1187,36 @@ function firebaseErrorMessage(err){
   return "Firebase xatosi: " + (err && err.message ? err.message : String(err));
 }
 
+/* Plays the ascending "call" chime and resolves once it has fully finished,
+   so the caller can safely wait an extra delay before starting the voice
+   announcement (prevents the chime and the number readout overlapping). */
 function playChime(){
-  try{
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new Ctx();
-    const notes = [880, 1108, 1318]; // airport-style ascending chime
-    notes.forEach((freq, i)=>{
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      osc.connect(gain); gain.connect(ctx.destination);
-      const start = ctx.currentTime + i*0.22;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.28, start+0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, start+0.5);
-      osc.start(start); osc.stop(start+0.55);
-    });
-  }catch(e){ /* audio not available */ }
+  return new Promise((resolve)=>{
+    try{
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      const notes = [880, 1108, 1318]; // airport-style ascending chime
+      let totalDurationSec = 0;
+      notes.forEach((freq, i)=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        osc.connect(gain); gain.connect(ctx.destination);
+        const startOffset = i*0.22;
+        const start = ctx.currentTime + startOffset;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.28, start+0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, start+0.5);
+        osc.start(start); osc.stop(start+0.55);
+        totalDurationSec = Math.max(totalDurationSec, startOffset+0.55);
+      });
+      setTimeout(resolve, Math.ceil(totalDurationSec*1000));
+    }catch(e){
+      /* audio not available */
+      resolve();
+    }
+  });
 }
 
 function isDoctorOnVacation(doc, date){
@@ -1366,6 +1379,7 @@ async function announceWithRecordedAudio(doctorName, ticketNumber, room){
 onSnapshot(doc(db,"config","main"), (snap)=>{
   CONFIG = snap.exists() ? snap.data() : {};
   applyConfigToUI();
+  checkAutoDailyReset();
 }, (err)=> showToast(firebaseErrorMessage(err)));
 
 let AUDIO_CLIPS = {};
@@ -1395,6 +1409,47 @@ onSnapshot(collection(db,"tickets"), (snap)=>{
   if(!receptionDash.classList.contains("hidden")) renderPendingList();
   if(currentDoctorSelfId) renderDoctorConsole();
 }, (err)=> showToast(firebaseErrorMessage(err)));
+
+/* =========================================================
+   AUTOMATIC DAILY RESET (runs at the start of each new day)
+   Mirrors what the "NAVBATLARNI BEKOR QILISH" (cancel all tickets)
+   button does in the Receptionist panel: wipes every ticket that
+   belongs to a past date so that numbering restarts from 1 on the
+   new day. It's checked on load and then every minute from every
+   open tab (board / kiosk / dashboards), guarded by a date marker
+   stored in config so it only actually runs once per day.
+   ========================================================= */
+async function checkAutoDailyReset(){
+  if(autoResetInFlight) return;
+  const today = todayStr();
+  if(!CONFIG) return;
+  if(CONFIG.lastResetDate === today) return; // already handled today
+  if(!CONFIG.lastResetDate){
+    // First time this system ever runs - just record today, don't delete anything.
+    try{
+      autoResetInFlight = true;
+      await setDoc(doc(db,"config","main"), {lastResetDate:today}, {merge:true});
+    }catch(e){ /* ignore */ }
+    finally{ autoResetInFlight = false; }
+    return;
+  }
+  // A new day has started since the last recorded reset -> clear out old tickets.
+  try{
+    autoResetInFlight = true;
+    const idsToDelete = Object.entries(TICKETS||{})
+      .filter(([id,tk])=> tk.date && tk.date !== today)
+      .map(([id])=>id);
+    for(const id of idsToDelete){
+      await deleteDoc(doc(db,"tickets",id));
+    }
+    await setDoc(doc(db,"config","main"), {lastResetDate:today}, {merge:true});
+  }catch(err){
+    console.error("Auto daily reset error:", err);
+  }finally{
+    autoResetInFlight = false;
+  }
+}
+setInterval(checkAutoDailyReset, 60*1000);
 
 /* =========================================================
    CONFIG -> UI
@@ -1567,13 +1622,17 @@ function renderBoard(){
   const topKey = rows.length ? (rows[0].doc.id+":"+(rows[0].lastCalledAt||0)) : "";
   const isNewPriority = topKey && topKey !== lastPriorityKey && rows[0].shown;
   if(isNewPriority){
-    playChime();
     const calledDoctorName = rows[0].doc.firstName+" "+rows[0].doc.lastName;
     const calledNumber = rows[0].shown.number;
     const calledRoom = rows[0].doc.room;
-    setTimeout(()=>{
-      announceWithRecordedAudio(calledDoctorName, calledNumber, calledRoom);
-    }, 1000);
+    // Play the chime fully first, THEN wait an extra 1 second of silence,
+    // and only after that start reading out the ticket number - so the
+    // chime and the voice announcement never overlap.
+    playChime().then(()=>{
+      setTimeout(()=>{
+        announceWithRecordedAudio(calledDoctorName, calledNumber, calledRoom);
+      }, 1000);
+    });
   }
   lastPriorityKey = topKey;
 
@@ -2360,6 +2419,7 @@ $("cancelAllTicketsBtn").addEventListener("click", async ()=>{
     for(const id of idsToDelete){
       await deleteDoc(doc(db,"tickets",id));
     }
+    await setDoc(doc(db,"config","main"), {lastResetDate:today}, {merge:true});
     showToast(t("cancelAllDone"), false);
   }catch(err){
     showToast(firebaseErrorMessage(err));
